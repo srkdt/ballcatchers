@@ -6,7 +6,7 @@ As part of the Mechatronics Trinational curriculum, our team has developed a rea
 **This repo contains and details the code used in the device (mainly C++).**
 
 ## Acknowledgements
-We would like to thank M. Silvan Wirth for his support and advice all along the process of designing, manufacturing and programming the device.
+We would like to thank Mr Silvan Wirth for his support and advice all along the process of designing, manufacturing and programming the device.
 *A special thanks also goes to Carlos the cat, without whom the project would never have seen the light of day.*
 
 ## Table of contents
