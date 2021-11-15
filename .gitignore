@@ -1,3 +1,16 @@
+*.json
+*.vscode
+*.pio
+
+# avoid local files
+.pio/
+.vscode/
+include/
+lib/
+test/
+platformio.ini
+Icon
+
 # Prerequisites
 *.d
 
