@@ -39,7 +39,7 @@ float gx_prev = 0, gy_prev = 0, gz_prev = 0;
 
 void setup()
 {
-
+    
     Serial.begin(115200);
 
     // Set device as a Wi-Fi Station
@@ -70,7 +70,6 @@ void setup()
 
 void loop()
 {
-
     x = 0;
     y = 0;
     z = 0;
@@ -116,7 +115,6 @@ void loop()
 
     if (difference > 2)
     {
-
         // Send message via ESP-NOW
         esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
 
