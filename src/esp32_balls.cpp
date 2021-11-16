@@ -39,6 +39,7 @@ float gx_prev = 0, gy_prev = 0, gz_prev = 0;
 
 void setup()
 {
+    
     Serial.begin(115200);
 
     // Set device as a Wi-Fi Station
