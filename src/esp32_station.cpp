@@ -1,8 +1,8 @@
 #include <Arduino.h>
 
-// #include <Adafruit_I2CDevice.h>
-// #include <Adafruit_GFX.h>
-// #include <Adafruit_SSD1351.h>
+#include <Adafruit_I2CDevice.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1351.h>
 #include <SPI.h>
 
 //This version of the code uses the screen and 4 buttons.
@@ -60,7 +60,7 @@ int StateRightHand = 0;
 #define WHITE 0xFFFF
 
 // Option 1: use any pins but a little slower
-// Adafruit_SSD1351 tft = Adafruit_SSD1351(SCREEN_WIDTH, SCREEN_HEIGHT, CS_PIN, DC_PIN, MOSI_PIN, SCLK_PIN, RST_PIN);
+Adafruit_SSD1351 tft = Adafruit_SSD1351(SCREEN_WIDTH, SCREEN_HEIGHT, CS_PIN, DC_PIN, MOSI_PIN, SCLK_PIN, RST_PIN);
 
 //Function Declaration
 int DifficultySelection();
