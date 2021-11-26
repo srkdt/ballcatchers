@@ -85,7 +85,7 @@ void setup()
     tft.setTextSize(1);
     tft.println("--- GRAVITY BALLS ---");
 
-    Serial.begin(9600);
+    Serial.begin(9601);
 }
 
 void loop()
@@ -139,8 +139,7 @@ int DifficultySelection()
         tft.setTextColor(BLUE);
         tft.setTextSize(1);
         tft.println("Choose difficulty");
-        Serial.println("playing in easy mode by default...");
-
+        
         if (StateNext != LastStateNext) //If State of the Next Button changes
         {
             if (StateNext == LOW)
@@ -187,15 +186,15 @@ int DifficultySelection()
         {
         case 0: // Easy Mode
             tft.println("Easy mode");
-            Serial.println("Easy mode selected");
+            Serial.println("***Easy mode selected***");
             break;
         case 1: // Normal Mode
             tft.println("Normal mode");
-            Serial.println("Normal mode selected");
+            Serial.println("***Normal mode selected***");
             break;
         case 2: // Hard Mode
             tft.println("Hard mode");
-            Serial.println("Hard mode selected");
+            Serial.println("***Hard mode selected***");
             break;
         }
         CounterSelect++;
@@ -222,8 +221,10 @@ int createDropTime(int min, int max)
 void DropBall(uint32_t time)
 {
     uint32_t DropTimer = time;
-    Serial.print("Droptimer ");
-    Serial.println(DropTimer);
+    Serial.print("Drop timer: ");
+    Serial.print(DropTimer);
+    Serial.print("   ||   elapsed time: ");
+    Serial.println(elapsedTime);
     if (elapsedTime > DropTimer)
     {
         bool dropRightBall = random(0, 2);
