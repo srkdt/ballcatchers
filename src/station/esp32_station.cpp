@@ -42,7 +42,7 @@ uint32_t elapsedTime = 0;
 //Button State
 int StateNext = 0;
 int LastStateNext = 0;
-int CounterNext = 0;
+int CounterNext = 0; //used for difficulty settings
 int StateSelect = 0;
 int LastStateSelect = 0;
 int CounterSelect = 0;
@@ -65,6 +65,7 @@ Adafruit_SSD1351 tft = Adafruit_SSD1351(SCREEN_WIDTH, SCREEN_HEIGHT, CS_PIN, DC_
 //Function Declaration
 int DifficultySelection();
 void DropBall(uint32_t time);
+int createDropTime(int min, int max);
 
 void setup()
 {
@@ -92,7 +93,7 @@ void loop()
     processorTime = millis();
 
     DifficultySelection();
-
+    
     //Readout of the handsensors (here simulated as PullUp Buttons)
     StateLeftHand = digitalRead(LeftHand);
     StateRightHand = digitalRead(RightHand);
@@ -105,42 +106,40 @@ void loop()
         switch (CounterNext)
         {
         case 0: // Easy Mode
-            timeToBallDrop = random(800, 1000);
+            //timeToBallDrop = random(800, 1000);
+            timeToBallDrop = createDropTime(800, 1000);
             break;
         case 1: // Normal Mode
-            timeToBallDrop = random(500, 1500);
+            //timeToBallDrop = random(500, 1500);
+            timeToBallDrop = createDropTime(500, 1500);
             break;
         case 2: // Hard Mode
-            timeToBallDrop = random(200, 2000);
+            //timeToBallDrop = random(200, 2000);
+            timeToBallDrop = createDropTime(200, 2000);
             break;
         }
         elapsedTime = processorTime - previousTime;
         DropBall(timeToBallDrop);
     }
-    else //reset lights
+    else
     {
         digitalWrite(redLED, LOW);
         digitalWrite(blueLED, LOW);
         digitalWrite(greenLED, LOW);
         previousTime = processorTime;
     }
-
-    /*Serial.print("CounterNext ");
-  Serial.println(CounterNext);
-
-  Serial.print("CounterSelect ");
-  Serial.println(CounterSelect);*/
 }
 
 int DifficultySelection()
 {
     StateNext = digitalRead(NextButton);
     if (CounterSelect == 0) //If the select Button has never been pressed, then allow user to choose difficulty
-    {
+    {        
         tft.setCursor(0, 30);
         tft.setTextColor(BLUE);
         tft.setTextSize(1);
         tft.println("Choose difficulty");
+        Serial.println("playing in easy mode by default...");
 
         if (StateNext != LastStateNext) //If State of the Next Button changes
         {
@@ -188,43 +187,59 @@ int DifficultySelection()
         {
         case 0: // Easy Mode
             tft.println("Easy mode");
+            Serial.println("Easy mode selected");
             break;
         case 1: // Normal Mode
             tft.println("Normal mode");
+            Serial.println("Normal mode selected");
             break;
         case 2: // Hard Mode
             tft.println("Hard mode");
+            Serial.println("Hard mode selected");
             break;
         }
         CounterSelect++;
     }
-    /*if (digitalRead(SelectButton) == LOW && digitalRead(NextButton) == LOW)
-  {
-    CounterSelect = 0;
-    CounterNext = 0;
-  }*/
+    if (digitalRead(SelectButton) == LOW && digitalRead(NextButton) == LOW)
+    {
+        tft.fillRect(0, 38, 128, 30, BLACK);
+        CounterSelect = 0;
+        CounterNext = 0;
+        delay(100);
+    }
     return CounterNext;
     return timeToBallDrop;
 }
 
+int createDropTime(int min, int max)
+{
+    int randomDroptimer = random(min, max);
+    /* Serial.print("randomDroptimer ");
+    Serial.println(randomDroptimer); */
+    return randomDroptimer;
+}
+
 void DropBall(uint32_t time)
 {
-    bool dropRightBall = random(0, 2);
-    Serial.println(dropRightBall);
     uint32_t DropTimer = time;
-    DropTimer = 1000;
-    //Serial.println(DropTimer);
+    Serial.print("Droptimer ");
+    Serial.println(DropTimer);
     if (elapsedTime > DropTimer)
     {
+        bool dropRightBall = random(0, 2);
         if (dropRightBall == true)
         {
             digitalWrite(blueLED, HIGH); // Right Ball drops
             digitalWrite(greenLED, LOW);
+            Serial.print("Right Ball dropped at ");
+            Serial.println(DropTimer);
         }
         if (dropRightBall != true)
         {
             digitalWrite(greenLED, HIGH); // Left Ball drops
             digitalWrite(blueLED, LOW);
+            Serial.print("Left Ball dropped at ");
+            Serial.println(DropTimer);
         }
         previousTime = processorTime;
     }

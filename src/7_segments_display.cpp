@@ -1,4 +1,4 @@
-#include <Arduino.h>
+/* #include <Arduino.h>
 
 #define SER_Pin 14                                                         //pin 14 (datapin) 2
 #define RCLK_Pin 32                                                        //pin 12 (latch pin) 1
@@ -61,3 +61,4 @@ void writeToDigit(int digitNumber, int number)
   shiftOut(SER_Pin, SRCLK_Pin, MSBFIRST, datArray[number]);        //shift in the actual number
   digitalWrite(RCLK_Pin, HIGH);                                    //pull the latchPin clockPin to save the data
 }
+ */
