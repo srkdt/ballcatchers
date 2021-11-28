@@ -221,10 +221,10 @@ int createDropTime(int min, int max)
 void DropBall(uint32_t time)
 {
     uint32_t DropTimer = time;
-    Serial.print("Drop timer: ");
+    /* Serial.print("Drop timer: ");
     Serial.print(DropTimer);
     Serial.print("   ||   elapsed time: ");
-    Serial.println(elapsedTime);
+    Serial.println(elapsedTime); */
     if (elapsedTime > DropTimer)
     {
         bool dropRightBall = random(0, 2);
