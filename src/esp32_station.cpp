@@ -5,6 +5,31 @@
 #include <Adafruit_SSD1351.h>
 #include <SPI.h>
 
+// --- ESP-NOW stuff ---
+#include <esp_now.h>
+#include <WiFi.h>
+
+bool catched = false;
+
+// Structure to receive data
+typedef struct struct_message
+{
+    bool ballSignal;
+    //float magnitude; //******
+} struct_message;
+
+// Create a struct_message called myData
+struct_message myData;
+
+// callback function that will be executed when data is received
+void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len)
+{
+    char macStr[18];
+    memcpy(&myData, incomingData, sizeof(myData));
+    myData.ballSignal = true;
+    catched = true;
+}
+
 //This version of the code uses the screen and 4 buttons.
 //2 for the Next/Select functionality
 //2 to simulate the Hand pads
@@ -34,10 +59,16 @@
 #define greenLED 14 //when left ball drops
 
 //Variables for Ball drop
-uint32_t timeToBallDrop = 0;
+uint16_t timeToRelease = 0;
 uint32_t processorTime = 0;
 uint32_t previousTime = 0;
 uint32_t elapsedTime = 0;
+
+uint32_t dropTime = 0;
+uint16_t catchTime = 0;
+
+// catch variable for random time generation
+bool catchMode = false;
 
 //Button State
 int StateNext = 0;
@@ -64,11 +95,27 @@ Adafruit_SSD1351 tft = Adafruit_SSD1351(SCREEN_WIDTH, SCREEN_HEIGHT, CS_PIN, DC_
 
 //Function Declaration
 int DifficultySelection();
-void DropBall(uint32_t time);
+void DropBall();
 int createDropTime(int min, int max);
+void timeGenerator(int mode);
+bool handsOn();
 
 void setup()
 {
+    // ESP-NOW stuff
+    //Set device as a Wi-Fi Station
+    WiFi.mode(WIFI_STA);
+
+    //Init ESP-NOW
+    if (esp_now_init() != ESP_OK)
+    {
+        Serial.println("Error initializing ESP-NOW");
+        return;
+    }
+
+    // Register for recv CB to get recv packer info
+    esp_now_register_recv_cb(OnDataRecv);
+
     pinMode(SelectButton, INPUT_PULLUP);
     pinMode(NextButton, INPUT_PULLUP);
     pinMode(LeftHand, INPUT_PULLUP);
@@ -85,48 +132,54 @@ void setup()
     tft.setTextSize(1);
     tft.println("--- GRAVITY BALLS ---");
 
-    Serial.begin(9601);
+    Serial.begin(115200);
 }
 
 void loop()
 {
-    processorTime = millis();
+    // processorTime = millis();
 
     DifficultySelection();
-    
-    //Readout of the handsensors (here simulated as PullUp Buttons)
-    StateLeftHand = digitalRead(LeftHand);
-    StateRightHand = digitalRead(RightHand);
 
-    //When both hands are in place, drop ball according to difficulty mode
-    if (StateLeftHand == LOW && StateRightHand == LOW)
+    if (catchMode == false)
+    {
+        timeGenerator(CounterNext);
+        catchMode = true;
+    }
+
+    while (handsOn())
+    {
+        uint32_t time = millis();
+
+        while (millis() - time < timeToRelease && handsOn())
+        {
+        }
+        DropBall(); // sets dropTime with millis() & releases ball
+        dropTime = millis();
+    }
+    if (myData.ballSignal == true)
+    {
+        catchTime = millis() - dropTime;
+        Serial.println(catchTime);
+        delay(3000);
+        catchMode = false;
+        myData.ballSignal = false;
+    }
+}
+
+bool handsOn()
+{
+    if (!digitalRead(LeftHand) && !digitalRead(RightHand))
     {
         digitalWrite(redLED, HIGH); //Red light signals both hands are placed
-        //tft.println("Get ready!");
-        switch (CounterNext)
-        {
-        case 0: // Easy Mode
-            timeToBallDrop = random(800, 1000);
-            // timeToBallDrop = createDropTime(800, 1000);
-            break;
-        case 1: // Normal Mode
-            timeToBallDrop = random(500, 1500);
-            // timeToBallDrop = createDropTime(500, 1500);
-            break;
-        case 2: // Hard Mode
-            timeToBallDrop = random(200, 2000);
-            // timeToBallDrop = createDropTime(200, 2000);
-            break;
-        }
-        elapsedTime = processorTime - previousTime;
-        DropBall(timeToBallDrop);
+        return true;
     }
     else
     {
         digitalWrite(redLED, LOW);
         digitalWrite(blueLED, LOW);
         digitalWrite(greenLED, LOW);
-        previousTime = processorTime;
+        return false;
     }
 }
 
@@ -134,12 +187,12 @@ int DifficultySelection()
 {
     StateNext = digitalRead(NextButton);
     if (CounterSelect == 0) //If the select Button has never been pressed, then allow user to choose difficulty
-    {        
+    {
         tft.setCursor(0, 30);
         tft.setTextColor(BLUE);
         tft.setTextSize(1);
         tft.println("Choose difficulty");
-        
+
         if (StateNext != LastStateNext) //If State of the Next Button changes
         {
             if (StateNext == LOW)
@@ -207,41 +260,41 @@ int DifficultySelection()
         delay(100);
     }
     return CounterNext;
-    return timeToBallDrop;
+    return timeToRelease;
 }
 
-// int createDropTime(int min, int max)
-// {
-//     int randomDroptimer = random(min, max);
-//     // Serial.print("randomDroptimer ");
-//     // Serial.println(randomDroptimer);
-//     return randomDroptimer;
-// }
-
-void DropBall(uint32_t time)
+void timeGenerator(int mode)
 {
-    uint32_t DropTimer = time;
-    // Serial.print("Drop timer: ");
-    // Serial.print(DropTimer);
-    // Serial.print("   ||   elapsed time: ");
-    // Serial.println(elapsedTime);
-    if (elapsedTime > DropTimer)
+    switch (mode)
     {
-        bool dropRightBall = random(0, 2);
-        if (dropRightBall == true)
-        {
-            digitalWrite(blueLED, HIGH); // Right Ball drops
-            digitalWrite(greenLED, LOW);
-            Serial.print("Right Ball dropped at ");
-            Serial.println(DropTimer);
-        }
-        if (dropRightBall != true)
-        {
-            digitalWrite(greenLED, HIGH); // Left Ball drops
-            digitalWrite(blueLED, LOW);
-            Serial.print("Left Ball dropped at ");
-            Serial.println(DropTimer);
-        }
-        previousTime = processorTime;
+    case 0: // Easy Mode
+        timeToRelease = random(800, 1000);
+        Serial.println(timeToRelease);
+        break;
+    case 1: // Normal Mode
+        timeToRelease = random(500, 1500);
+        Serial.println(timeToRelease);
+        break;
+    case 2: // Hard Mode
+        timeToRelease = random(200, 2000);
+        Serial.println(timeToRelease);
+        break;
+    }
+}
+
+void DropBall()
+{
+    bool dropRightBall = random(0, 2);
+    if (dropRightBall)
+    {
+        digitalWrite(blueLED, HIGH); // Right Ball drops
+        digitalWrite(greenLED, LOW);
+        Serial.print("Right Ball dropped at ");
+    }
+    else
+    {
+        digitalWrite(greenLED, HIGH); // Left Ball drops
+        digitalWrite(blueLED, LOW);
+        Serial.print("Left Ball dropped at ");
     }
 }
