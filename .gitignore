@@ -14,7 +14,7 @@
 include/
 lib/
 test/
-platformio.ini
+# platformio.ini
 Icon
 Icon[\r]
 
