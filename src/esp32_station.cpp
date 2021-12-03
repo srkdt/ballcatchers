@@ -24,7 +24,6 @@ struct_message myData;
 // callback function that will be executed when data is received
 void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len)
 {
-    char macStr[18];
     memcpy(&myData, incomingData, sizeof(myData));
     myData.ballSignal = true;
     catched = true;
@@ -155,13 +154,13 @@ void loop()
         {
         }
         DropBall(); // sets dropTime with millis() & releases ball
+        
         dropTime = millis();
     }
     if (myData.ballSignal == true)
     {
         catchTime = millis() - dropTime;
         Serial.println(catchTime);
-        delay(3000);
         catchMode = false;
         myData.ballSignal = false;
     }
@@ -269,14 +268,17 @@ void timeGenerator(int mode)
     {
     case 0: // Easy Mode
         timeToRelease = random(800, 1000);
+        Serial.print("Time to release - easy: \t");
         Serial.println(timeToRelease);
         break;
     case 1: // Normal Mode
         timeToRelease = random(500, 1500);
+        Serial.print("Time to release - normal: \t");
         Serial.println(timeToRelease);
         break;
     case 2: // Hard Mode
         timeToRelease = random(200, 2000);
+        Serial.print("Time to release - hard: \t");
         Serial.println(timeToRelease);
         break;
     }
