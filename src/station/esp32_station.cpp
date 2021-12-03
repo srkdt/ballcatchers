@@ -106,16 +106,16 @@ void loop()
         switch (CounterNext)
         {
         case 0: // Easy Mode
-            //timeToBallDrop = random(800, 1000);
-            timeToBallDrop = createDropTime(800, 1000);
+            timeToBallDrop = random(800, 1000);
+            // timeToBallDrop = createDropTime(800, 1000);
             break;
         case 1: // Normal Mode
-            //timeToBallDrop = random(500, 1500);
-            timeToBallDrop = createDropTime(500, 1500);
+            timeToBallDrop = random(500, 1500);
+            // timeToBallDrop = createDropTime(500, 1500);
             break;
         case 2: // Hard Mode
-            //timeToBallDrop = random(200, 2000);
-            timeToBallDrop = createDropTime(200, 2000);
+            timeToBallDrop = random(200, 2000);
+            // timeToBallDrop = createDropTime(200, 2000);
             break;
         }
         elapsedTime = processorTime - previousTime;
@@ -210,21 +210,21 @@ int DifficultySelection()
     return timeToBallDrop;
 }
 
-int createDropTime(int min, int max)
-{
-    int randomDroptimer = random(min, max);
-    /* Serial.print("randomDroptimer ");
-    Serial.println(randomDroptimer); */
-    return randomDroptimer;
-}
+// int createDropTime(int min, int max)
+// {
+//     int randomDroptimer = random(min, max);
+//     // Serial.print("randomDroptimer ");
+//     // Serial.println(randomDroptimer);
+//     return randomDroptimer;
+// }
 
 void DropBall(uint32_t time)
 {
     uint32_t DropTimer = time;
-    /* Serial.print("Drop timer: ");
-    Serial.print(DropTimer);
-    Serial.print("   ||   elapsed time: ");
-    Serial.println(elapsedTime); */
+    // Serial.print("Drop timer: ");
+    // Serial.print(DropTimer);
+    // Serial.print("   ||   elapsed time: ");
+    // Serial.println(elapsedTime);
     if (elapsedTime > DropTimer)
     {
         bool dropRightBall = random(0, 2);
