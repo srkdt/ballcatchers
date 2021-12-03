@@ -83,9 +83,9 @@ void setup()
     tft.fillScreen(BLACK);
     tft.setTextColor(GREEN);
     tft.setTextSize(1);
-    tft.println("--- GRAVITY BALLS ---");
+    tft.println("--- BAllCATCHERZ ---");
 
-    Serial.begin(9601);
+    Serial.begin(115200);
 }
 
 void loop()
