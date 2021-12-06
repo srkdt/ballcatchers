@@ -19,11 +19,11 @@ struct_message myData;
 esp_now_peer_info_t peerInfo;
 
 // callback when data is sent
-void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
-  // Serial.print("\r\nLast Packet Send Status:\t");
-  // Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
+{
+  Serial.print("\r\nLast Packet Send Status:\t");
+  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 }
-
 
 // Accelerometer pins:
 #define xPin 34
@@ -35,8 +35,11 @@ int x = 0, y = 0, z = 0;
 float gx = 0, gy = 0, gz = 0;
 float gx_prev = 0, gy_prev = 0, gz_prev = 0;
 
+bool okToSend = true;
+int lastTime = 0;
 
-void setup() {
+void setup()
+{
 
   Serial.begin(115200);
 
@@ -44,7 +47,8 @@ void setup() {
   WiFi.mode(WIFI_STA);
 
   // Init ESP-NOW
-  if (esp_now_init() != ESP_OK) {
+  if (esp_now_init() != ESP_OK)
+  {
     Serial.println("Error initializing ESP-NOW");
     return;
   }
@@ -58,20 +62,22 @@ void setup() {
   peerInfo.encrypt = false;
 
   // Add peer
-  if (esp_now_add_peer(&peerInfo) != ESP_OK) {
+  if (esp_now_add_peer(&peerInfo) != ESP_OK)
+  {
     Serial.println("Failed to add peer");
     return;
   }
 }
 
-
-void loop() {
+void loop()
+{
 
   x = 0;
   y = 0;
   z = 0;
 
-  for (int i = 0; i < 10; i++) {
+  for (int i = 0; i < 10; i++)
+  {
     x += analogRead(xPin);
     y += analogRead(yPin);
     z += analogRead(zPin);
@@ -104,23 +110,25 @@ void loop() {
 
   //Serial.println(difference);
 
-
   // Set values to send
   // myData.id = 0;
   // myData.magnitude = difference;
 
-  if (difference > 2) {
+  if (difference > 2 && millis() - lastTime > 3000)
+  {
 
     // Send message via ESP-NOW
-    esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
+    esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
 
-    if (result == ESP_OK) {
+    if (result == ESP_OK)
+    {
       Serial.println("Sent with success");
     }
-    else {
+    else
+    {
       Serial.println("Error sending the data");
     }
-    // delay(1000);
-  }
 
+    lastTime = millis();
+  }
 }

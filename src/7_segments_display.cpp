@@ -1,8 +1,8 @@
-/* #include <Arduino.h>
+#include <Arduino.h>
 
-#define SER_Pin 14                                                         //pin 14 (datapin) 2
-#define RCLK_Pin 32                                                        //pin 12 (latch pin) 1
-#define SRCLK_Pin 15                                                       //pin 11 (clock pin) 3
+#define SER_Pin 14                                                         //pin 26 (datapin) 2
+#define RCLK_Pin 32                                                        //pin 27 (latch pin) 1
+#define SRCLK_Pin 15                                                       //pin 25 (clock pin) 3
 const int datArray[11] = {63, 6, 91, 79, 102, 109, 125, 7, 127, 111, 128}; //base 10 representations of bits for 0,1,2,3,4,5,6,7,8,9,.
 const byte digitArray[4] = {0b1000, 0b0100, 0b0010, 0b0001};               //digit number (first four bits in the bit shifter)
 int reactionTime = 0;
@@ -61,4 +61,3 @@ void writeToDigit(int digitNumber, int number)
   shiftOut(SER_Pin, SRCLK_Pin, MSBFIRST, datArray[number]);        //shift in the actual number
   digitalWrite(RCLK_Pin, HIGH);                                    //pull the latchPin clockPin to save the data
 }
- */

@@ -9,8 +9,6 @@
 #include <esp_now.h>
 #include <WiFi.h>
 
-bool catched = false;
-
 // Structure to receive data
 typedef struct struct_message
 {
@@ -20,6 +18,9 @@ typedef struct struct_message
 
 // Create a struct_message called myData
 struct_message myData;
+
+// variable affected by ball catching
+bool catched = false;
 
 // callback function that will be executed when data is received
 void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len)
@@ -68,6 +69,7 @@ uint16_t catchTime = 0;
 
 // catch variable for random time generation
 bool catchMode = false;
+bool dropped = false;
 
 //Button State
 int StateNext = 0;
@@ -98,6 +100,7 @@ void DropBall();
 int createDropTime(int min, int max);
 void timeGenerator(int mode);
 bool handsOn();
+void handsDelay(int timeToDrop);
 
 void setup()
 {
@@ -136,33 +139,35 @@ void setup()
 
 void loop()
 {
-    // processorTime = millis();
-
     DifficultySelection();
 
     if (catchMode == false)
     {
         timeGenerator(CounterNext);
         catchMode = true;
+        catched = false;
+        Serial.println("\n\t--- Waiting for hands... ---");
+        handsDelay(timeToRelease); // checks user's hands position for given amt of time
+        DropBall();                // also assigns millis() to dropTime
+        dropped = true;
     }
 
-    while (handsOn())
+    if (catched == true)
     {
-        uint32_t time = millis();
-
-        while (millis() - time < timeToRelease && handsOn())
+        catchTime = (millis() - dropTime);
+        Serial.print("\tCatch time: \t");
+        Serial.println(catchTime);
+        while (!handsOn())
         {
         }
-        DropBall(); // sets dropTime with millis() & releases ball
-        
-        dropTime = millis();
-    }
-    if (myData.ballSignal == true)
-    {
-        catchTime = millis() - dropTime;
-        Serial.println(catchTime);
         catchMode = false;
         myData.ballSignal = false;
+        catched = false;
+        dropped = false;
+        int catchedDelay = millis();
+        while (millis() - catchedDelay < 1000)
+        {
+        }
     }
 }
 
@@ -268,19 +273,38 @@ void timeGenerator(int mode)
     {
     case 0: // Easy Mode
         timeToRelease = random(800, 1000);
-        Serial.print("Time to release - easy: \t");
-        Serial.println(timeToRelease);
+        // Serial.print("Time to release - easy: \t");
+        // Serial.println(timeToRelease);
         break;
     case 1: // Normal Mode
         timeToRelease = random(500, 1500);
-        Serial.print("Time to release - normal: \t");
-        Serial.println(timeToRelease);
+        // Serial.print("Time to release - normal: \t");
+        // Serial.println(timeToRelease);
         break;
     case 2: // Hard Mode
         timeToRelease = random(200, 2000);
-        Serial.print("Time to release - hard: \t");
-        Serial.println(timeToRelease);
+        // Serial.print("Time to release - hard: \t");
+        // Serial.println(timeToRelease);
         break;
+    }
+}
+
+void handsDelay(int timeToDrop)
+{
+    bool ok = false;
+    while (!ok)
+    {
+        uint32_t millisAtStart = millis();
+        while (handsOn() && !ok)
+        { // both hands to continue
+            uint32_t currentMillis = millis();
+            if (currentMillis - millisAtStart > timeToDrop)
+            {
+                ok = true;
+                // Serial.print("ok - out of the loop after \t");
+                // Serial.print(timeToDrop);
+            }
+        }
     }
 }
 
@@ -291,12 +315,13 @@ void DropBall()
     {
         digitalWrite(blueLED, HIGH); // Right Ball drops
         digitalWrite(greenLED, LOW);
-        Serial.print("Right Ball dropped at ");
+        Serial.println("\tRight Ball dropped yeh");
     }
     else
     {
         digitalWrite(greenLED, HIGH); // Left Ball drops
         digitalWrite(blueLED, LOW);
-        Serial.print("Left Ball dropped at ");
+        Serial.println("\tLeft Ball dropped yeh");
     }
+    dropTime = millis();
 }
