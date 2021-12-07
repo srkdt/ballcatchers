@@ -8,7 +8,7 @@ const byte digitArray[4] = {0b1000, 0b0100, 0b0010, 0b0001};               //dig
 int reactionTime = 0;
 int reactionTimeDisplayed[4];
 int refreshRate = 60; //Hz
-int counter = 1;      // for refreshing the display
+int difficultyCounter = 1;      // for refreshing the display
 void writeToDigit(int digitNumber, int number);
 
 unsigned long processorTime; // in order to avoid using delay()
@@ -37,15 +37,15 @@ void loop()
   elapsedTime = processorTime - previousTime;
   if (elapsedTime >= 1000 / (refreshRate * 4))
   { //=4.1ms @ 60Hz
-    if (counter < 5)
+    if (difficultyCounter < 5)
     {
-      counter++;                                                 //jump to next display
-      writeToDigit(counter, reactionTimeDisplayed[counter - 1]); //update display
+      difficultyCounter++;                                                 //jump to next display
+      writeToDigit(difficultyCounter, reactionTimeDisplayed[difficultyCounter - 1]); //update display
       previousTime = processorTime;
     }
     else
     {
-      counter = 1;
+      difficultyCounter = 1;
       previousTime = processorTime;
     }
   }

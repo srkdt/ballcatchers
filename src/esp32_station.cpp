@@ -20,14 +20,14 @@ typedef struct struct_message
 struct_message myData;
 
 // variable affected by ball catching
-bool catched = false;
+bool caught = false;
 
 // callback function that will be executed when data is received
 void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len)
 {
     memcpy(&myData, incomingData, sizeof(myData));
     myData.ballSignal = true;
-    catched = true;
+    caught = true;
 }
 
 //This version of the code uses the screen and 4 buttons.
@@ -37,6 +37,18 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len)
 // Screen dimensions
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 128 // Change this to 96 for 1.27" OLED.
+
+// Color definitions
+#define BLACK 0x0000
+#define BLUE 0x001F
+#define RED 0xF800
+#define GREEN 0x07E0
+#define CYAN 0x07FF
+#define MAGENTA 0xF81F
+#define YELLOW 0xFFE0
+#define WHITE 0xFFFF
+
+void lcdTestPattern(void);
 
 // You can use any (4 or) 5 pins
 #define SCLK_PIN 2
@@ -66,15 +78,17 @@ uint32_t elapsedTime = 0;
 
 uint32_t dropTime = 0;
 uint16_t catchTime = 0;
+uint16_t bestTime = 0;
 
 // catch variable for random time generation
 bool catchMode = false;
 bool dropped = false;
 
 //Button State
+int difficultyCounter = 0; // variable for difficulty selection
 int StateNext = 0;
 int LastStateNext = 0;
-int CounterNext = 0; //used for difficulty settings
+int CounterNext = 0; // used for difficulty settings
 int StateSelect = 0;
 int LastStateSelect = 0;
 int CounterSelect = 0;
@@ -95,15 +109,19 @@ int StateRightHand = 0;
 Adafruit_SSD1351 tft = Adafruit_SSD1351(SCREEN_WIDTH, SCREEN_HEIGHT, CS_PIN, DC_PIN, MOSI_PIN, SCLK_PIN, RST_PIN);
 
 //Function Declaration
-int DifficultySelection();
+void DifficultySelection();
 void DropBall();
 int createDropTime(int min, int max);
 void timeGenerator(int mode);
 bool handsOn();
+bool fingersOn();
 void handsDelay(int timeToDrop);
 
 void setup()
 {
+
+    Serial.begin(115200);
+
     // ESP-NOW stuff
     //Set device as a Wi-Fi Station
     WiFi.mode(WIFI_STA);
@@ -128,44 +146,91 @@ void setup()
 
     tft.begin();
 
+    lcdTestPattern();
+    delay(1000);
+
     tft.setCursor(0, 5);
     tft.fillScreen(BLACK);
     tft.setTextColor(GREEN);
     tft.setTextSize(1);
     tft.println("--- BAllCATCHERZ ---");
 
-    Serial.begin(115200);
+    DifficultySelection();
 }
 
 void loop()
 {
-    DifficultySelection();
-
     if (catchMode == false)
     {
+        tft.fillRect(0, 38, 128, 90, BLACK);
+        tft.setCursor(0, 40);
+        tft.setTextColor(BLUE);
+        tft.setTextSize(1);
+        tft.println("\nPress hands to play");
+        tft.println("\nPress next to change difficulty");
+        while (1)
+        {
+            if (digitalRead(NextButton) == LOW)
+            {
+                DifficultySelection();
+                break;
+            }
+            else if (handsOn())
+            {
+                break;
+            }
+        }
         timeGenerator(CounterNext);
         catchMode = true;
-        catched = false;
+        caught = false;
         Serial.println("\n\t--- Waiting for hands... ---");
+        while (!handsOn())
+        {
+            if (digitalRead(NextButton) == LOW)
+            {
+                CounterSelect = 0;
+                break;
+            }
+        }
+
         handsDelay(timeToRelease); // checks user's hands position for given amt of time
         DropBall();                // also assigns millis() to dropTime
         dropped = true;
     }
 
-    if (catched == true)
+    if (caught == true)
     {
         catchTime = (millis() - dropTime);
         Serial.print("\tCatch time: \t");
         Serial.println(catchTime);
+        tft.fillRect(0, 40, 128, 90, BLACK);
+        tft.setCursor(0, 40);
+        tft.print("\nScore: ");
+        if (catchTime < bestTime || bestTime == 0)
+        {
+            bestTime = catchTime;
+            tft.setTextColor(GREEN);
+        }
+        else
+            tft.setTextColor(RED);
+
+        tft.setTextSize(2);
+        tft.println(catchTime);
+
+        tft.setTextColor(WHITE);
+        tft.setTextSize(1);
+        tft.print("\n\nBest score: ");
+        tft.println(bestTime);
+
         while (!handsOn())
         {
         }
         catchMode = false;
         myData.ballSignal = false;
-        catched = false;
+        caught = false;
         dropped = false;
-        int catchedDelay = millis();
-        while (millis() - catchedDelay < 1000)
+        int caughtDelay = millis();
+        while (millis() - caughtDelay < 1000)
         {
         }
     }
@@ -187,84 +252,76 @@ bool handsOn()
     }
 }
 
-int DifficultySelection()
+bool fingersOn()
 {
-    StateNext = digitalRead(NextButton);
-    if (CounterSelect == 0) //If the select Button has never been pressed, then allow user to choose difficulty
+    if (!digitalRead(NextButton) && !digitalRead(SelectButton))
     {
-        tft.setCursor(0, 30);
-        tft.setTextColor(BLUE);
-        tft.setTextSize(1);
-        tft.println("Choose difficulty");
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
 
-        if (StateNext != LastStateNext) //If State of the Next Button changes
+void DifficultySelection()
+{
+
+    Serial.println("--- Difficutly selection ---");
+    tft.fillRect(0, 18, 128, 110, BLACK);
+    tft.setCursor(0, 30);
+    tft.setTextColor(BLUE);
+    tft.setTextSize(1);
+    tft.println("Choose difficulty");
+
+    while (digitalRead(SelectButton))
+    {
+        if (digitalRead(NextButton) == LOW)
         {
-            if (StateNext == LOW)
+            tft.fillRect(0, 38, 128, 90, BLACK);
+            tft.setCursor(0, 50);
+            tft.setTextSize(2);
+            difficultyCounter++;
+            if (difficultyCounter == 3)
             {
-                CounterNext++; //The current value +1
-                tft.fillRect(0, 38, 128, 8, BLACK);
+                difficultyCounter = 0;
             }
-        }
-        LastStateNext = StateNext; //Set Last state to current state, since the change has happened and it needs to be logged
-
-        switch (CounterNext) //CounterNext used as variable for difficulty selection
-        {
-        case 0: //Easy Mode
-            tft.println("Easy");
-            break;
-        case 1: //Normal Mode
-            tft.println("Normal");
-            break;
-        case 2: //Hard Mode
-            tft.println("Hard");
-            break;
-        case 3: //Go back to Easy after Hard by setting CounterNext to 0
-            CounterNext = 0;
-            break;
+            switch (difficultyCounter)
+            {
+            case 0: // Easy Mode
+                tft.println("Easy");
+                break;
+            case 1: // Normal Mode
+                tft.println("Normal");
+                break;
+            case 2: // Hard Mode
+                tft.println("Hard");
+                break;
+            }
+            Serial.print("Difficulty: ");
+            Serial.println(difficultyCounter);
+            delay(200);
         }
     }
-
-    //State change recognition of the Select Button
-    StateSelect = digitalRead(SelectButton);
-    if (StateSelect != LastStateSelect)
+    tft.fillRect(0, 18, 128, 90, BLACK);
+    tft.setCursor(0, 30);
+    tft.setTextSize(1);
+    tft.print("Difficulty: ");
+    switch (difficultyCounter)
     {
-        if (StateSelect == LOW)
-        {
-            CounterSelect++;
-        }
+    case 0: // Easy Mode
+        tft.println("EASY");
+        Serial.println("*** Easy mode selected ***");
+        break;
+    case 1: // Normal Mode
+        tft.println("NORMAL");
+        Serial.println("*** Normal mode selected ***");
+        break;
+    case 2: // Hard Mode
+        tft.println("HARD");
+        Serial.println("*** Hard mode selected ***");
+        break;
     }
-    LastStateSelect = StateSelect;
-
-    //After Select Button was pressed, stop difficulty selection with Next Button and display selected dificulty on screen
-    while (CounterSelect == 1)
-    {
-        tft.println("Playing in");
-        switch (CounterNext)
-        {
-        case 0: // Easy Mode
-            tft.println("Easy mode");
-            Serial.println("***Easy mode selected***");
-            break;
-        case 1: // Normal Mode
-            tft.println("Normal mode");
-            Serial.println("***Normal mode selected***");
-            break;
-        case 2: // Hard Mode
-            tft.println("Hard mode");
-            Serial.println("***Hard mode selected***");
-            break;
-        }
-        CounterSelect++;
-    }
-    if (digitalRead(SelectButton) == LOW && digitalRead(NextButton) == LOW)
-    {
-        tft.fillRect(0, 38, 128, 30, BLACK);
-        CounterSelect = 0;
-        CounterNext = 0;
-        delay(100);
-    }
-    return CounterNext;
-    return timeToRelease;
 }
 
 void timeGenerator(int mode)
@@ -324,4 +381,17 @@ void DropBall()
         Serial.println("\tLeft Ball dropped yeh");
     }
     dropTime = millis();
+}
+
+void lcdTestPattern(void)
+{
+    static const uint16_t PROGMEM colors[] =
+        {RED, YELLOW, GREEN, CYAN, BLUE, MAGENTA, BLACK, WHITE};
+
+    for (uint8_t c = 0; c < 8; c++)
+    {
+        tft.fillRect(0, tft.height() * c / 8, tft.width(), tft.height() / 8,
+                     pgm_read_word(&colors[c]));
+        delay(100);
+    }
 }
