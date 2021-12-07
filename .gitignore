@@ -1,6 +1,7 @@
 *.json
 *.vscode
 *.pio
+*.ini
 
 .pio
 .vscode/.browse.c_cpp.db*
