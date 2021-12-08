@@ -51,7 +51,7 @@
 #define LEFTHALLSENSOR 32
 
 // TODO: Pin for LED Strip
-//#define LEDSTRIP 15
+//#define LEDSTRIP 15 //alternativly 21 and 34 are still free
 
 //TODO: Delete wehen nolonger needed
 // Pins for LEDs for simulation purposes
@@ -74,6 +74,7 @@ Servo rightServo; //Create servo object to control right servo
 Servo leftServo;  //Create servo object to control left servo
 int posRightServo = 0;
 int posLeftServo = 0;
+unsigned long servoUp = 0;
 
 // time variables for Ball drop
 uint16_t timeToRelease = 0;
@@ -92,6 +93,7 @@ void DropBall();
 int createDropTime(int min, int max);
 void timeGenerator(int mode);
 bool handsOn();
+bool ballsPlaced();
 bool fingersOn();
 void handsDelay(int timeToDrop);
 void lcdTestPattern(void);
@@ -152,6 +154,9 @@ void setup()
 
     rightServo.attach(RIGHTSERVOPIN);
     leftServo.attach(LEFTSERVOPIN);
+
+    rightServo.write(90);
+    leftServo.write(90);
 
     pinMode(RIGHTHALLSENSOR, INPUT);
     pinMode(LEFTHALLSENSOR, INPUT);
@@ -272,6 +277,7 @@ bool handsOn() // returns true if hands are in place
 bool ballsPlaced() // returns true if balls are in place
 {
     if (analogRead(LEFTHALLSENSOR) >= 1900 && analogRead(RIGHTHALLSENSOR) >= 1900)
+    // TODO: Check the threshhold once new Hallsensors are in housing
     {
         //TODO: Implement LED Strip signalizing that game is ready
         return true;
@@ -391,23 +397,33 @@ void handsDelay(int timeToDrop)
 void DropBall()
 {
     bool dropRightBall = random(0, 2);
+    dropRightBall = 0;
     if (dropRightBall)
     {
         //TODO: Implement rightServo release
+        rightServo.write(60);
+
         //TODO: Delete wehen nolonger needed
         // digitalWrite(BLUELED, HIGH); // Right Ball drops
         // digitalWrite(GREENLED, LOW);
-        // Serial.println("\tRight Ball dropped yeh");
+        Serial.println("\tRight Ball dropped yeh");
     }
     else
     {
         //TODO: Implement leftServo release
+        leftServo.write(120);
+        Serial.println(leftServo.read());
+
         //TODO: Delete wehen nolonger needed
         // digitalWrite(GREENLED, HIGH); // Left Ball drops
         // digitalWrite(BLUELED, LOW);
-        // Serial.println("\tLeft Ball dropped yeh");
+        Serial.println("\tLeft Ball dropped yeh");
     }
     dropTime = millis();
+    // if (leftServo.read() >= 118)
+    // {
+    //     leftServo.write(90);
+    // }
 }
 
 void lcdTestPattern(void)
