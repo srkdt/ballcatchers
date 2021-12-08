@@ -197,8 +197,6 @@ void loop()
     if (caught == true)
     {
         catchTime = (millis() - dropTime);
-        // Serial.print("\tCatch time: \t");
-        // Serial.println(catchTime);
         servosback();
         displayScore();
         catchMode = false;
@@ -211,17 +209,11 @@ bool handsOn() // returns true if hands are in place
     if (!digitalRead(LEFTHAND) && !digitalRead(RIGHTHAND))
     {
         //TODO: Implement LED Strip signalizing that game is ready
-        //TODO: Delete wehen nolonger needed
-        //digitalWrite(REDLED, HIGH); // Red light signals both hands are placed
         return true;
     }
     else
     {
         //TODO: Implement LED Strip signalizing that game is NOT ready
-        //TODO: Delete wehen nolonger needed
-        // digitalWrite(REDLED, LOW);
-        // digitalWrite(BLUELED, LOW);
-        // digitalWrite(GREENLED, LOW);
         return false;
     }
 }
@@ -255,10 +247,7 @@ void DifficultySelection()
             tft.fillRect(0, 38, 128, 90, BLACK);
             tft.setCursor(0, 50);
             tft.setTextSize(2);
-
             displayDifficulty();
-            // Serial.print("Difficulty: ");
-            // Serial.println(difficultyCounter);
 
             delay(200); // avoid bouncing
         }
@@ -272,7 +261,6 @@ void DifficultySelection()
     tft.setCursor(0, 30);
     tft.setTextSize(1);
     tft.print("Difficulty: ");
-
     displayDifficulty();
 }
 
@@ -339,8 +327,6 @@ void handsDelay(int timeToDrop)
             if (currentMillis - millisAtStart > timeToDrop)
             {
                 ok = true;
-                // Serial.print("ok - out of the loop after \t");
-                // Serial.print(timeToDrop);
             }
         }
     }
@@ -357,22 +343,12 @@ void DropBall()
     bool dropRightBall = random(0, 2);
     if (dropRightBall)
     {
-        //TODO: Implement rightServo release
         rightServo.write(60);
-
-        //TODO: Delete wehen nolonger needed
-        // digitalWrite(BLUELED, HIGH); // Right Ball drops
-        // digitalWrite(GREENLED, LOW);
         Serial.println("\tRight Ball dropped yeh");
     }
     else
     {
-        //TODO: Implement leftServo release
         leftServo.write(120);
-
-        //TODO: Delete wehen nolonger needed
-        // digitalWrite(GREENLED, HIGH); // Left Ball drops
-        // digitalWrite(BLUELED, LOW);
         Serial.println("\tLeft Ball dropped yeh");
     }
     dropTime = millis();
@@ -407,7 +383,6 @@ void displayScore()
 
     tft.setTextSize(2); // score bigger size
     tft.println(catchTime);
-    //TODO: print to 7Seg display
 
     tft.setTextColor(WHITE);
     tft.setTextSize(1);
@@ -415,10 +390,10 @@ void displayScore()
     tft.println(bestTime); // best score printed in white
     tft.print("Place hands to continue...");
 
-    reactionTimeDisplayed[0] = catchTime / 1000;
+    reactionTimeDisplayed[0] = catchTime / 1000; // array to be pushed to digits
     reactionTimeDisplayed[1] = (catchTime / 100) % 10;
     reactionTimeDisplayed[2] = (catchTime / 10) % 10;
-    reactionTimeDisplayed[3] = catchTime % 10; // push it to digits
+    reactionTimeDisplayed[3] = catchTime % 10;
 
     while (!handsOn())
     {
