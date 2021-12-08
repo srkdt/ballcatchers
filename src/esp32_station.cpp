@@ -53,7 +53,8 @@
 // TODO: Pin for LED Strip
 //#define LEDSTRIP 15
 
-// // Pins for LEDs for simulation purposes
+//TODO: Delete wehen nolonger needed
+// Pins for LEDs for simulation purposes
 // #define REDLED 13   //when both hands are place
 // #define BLUELED 12  //when right ball drops
 // #define GREENLED 14 //when left ball drops
@@ -94,6 +95,7 @@ bool handsOn();
 bool fingersOn();
 void handsDelay(int timeToDrop);
 void lcdTestPattern(void);
+//TODO: Declare function catchtime to writeToDigit()
 void writeToDigit(int digitNumber, int number);
 
 // --- ESP-NOW stuff ---
@@ -137,6 +139,7 @@ void setup()
     // Register for recv CB to get recv packer info
     esp_now_register_recv_cb(OnDataRecv);
 
+    // 7 Segment Display stuff
     pinMode(SER_PIN, OUTPUT);
     pinMode(RCLK_PIN, OUTPUT);
     pinMode(SRCLK_PIN, OUTPUT);
@@ -153,6 +156,7 @@ void setup()
     pinMode(RIGHTHALLSENSOR, INPUT);
     pinMode(LEFTHALLSENSOR, INPUT);
 
+    //TODO: Delete wehen nolonger needed
     // pinMode(REDLED, OUTPUT);
     // pinMode(BLUELED, OUTPUT);
     // pinMode(GREENLED, OUTPUT);
@@ -179,8 +183,8 @@ void loop()
         tft.setCursor(0, 40);
         tft.setTextColor(BLUE);
         tft.setTextSize(1);
-        tft.println("\nPress hands to play");
-        tft.println("\nPress next to change difficulty");
+        tft.println("\nPlace hands to play");
+        tft.println("\nPress NEXT to change difficulty");
 
         while (1)
         {
@@ -225,6 +229,7 @@ void loop()
 
         tft.setTextSize(2); // score bigger size
         tft.println(catchTime);
+        //TODO: print to 7Seg display
 
         tft.setTextColor(WHITE);
         tft.setTextSize(1);
@@ -232,6 +237,7 @@ void loop()
         tft.println(bestTime); // best score printed in white
 
         while (!handsOn()) // TODO: remove when clear how long score should be displayed
+                           // TODO: ...or, Display on oled that hands must be placed again?
         {
         }
         catchMode = false;
@@ -247,21 +253,39 @@ bool handsOn() // returns true if hands are in place
 {
     if (!digitalRead(LEFTHAND) && !digitalRead(RIGHTHAND))
     {
-        digitalWrite(REDLED, HIGH); // Red light signals both hands are placed
+        //TODO: Implement LED Strip signalizing that game is ready
+        //TODO: Delete wehen nolonger needed
+        //digitalWrite(REDLED, HIGH); // Red light signals both hands are placed
         return true;
     }
     else
     {
-        digitalWrite(REDLED, LOW);
-        digitalWrite(BLUELED, LOW);
-        digitalWrite(GREENLED, LOW);
+        //TODO: Implement LED Strip signalizing that game is NOT ready
+        //TODO: Delete wehen nolonger needed
+        // digitalWrite(REDLED, LOW);
+        // digitalWrite(BLUELED, LOW);
+        // digitalWrite(GREENLED, LOW);
+        return false;
+    }
+}
+
+bool ballsPlaced() // returns true if balls are in place
+{
+    if (analogRead(LEFTHALLSENSOR) >= 1900 && analogRead(RIGHTHALLSENSOR) >= 1900)
+    {
+        //TODO: Implement LED Strip signalizing that game is ready
+        return true;
+    }
+    else
+    {
+        //TODO: Implement LED Strip signalizing that game is NOT ready
         return false;
     }
 }
 
 void DifficultySelection()
 {
-    Serial.println("--- Difficutly selection ---");
+    //Serial.println("--- Difficutly selection ---");
     tft.fillRect(0, 18, 128, 110, BLACK);
     tft.setCursor(0, 30);
     tft.setTextColor(BLUE);
@@ -369,14 +393,18 @@ void DropBall()
     bool dropRightBall = random(0, 2);
     if (dropRightBall)
     {
-        digitalWrite(BLUELED, HIGH); // Right Ball drops
-        digitalWrite(GREENLED, LOW);
+        //TODO: Implement rightServo release
+        //TODO: Delete wehen nolonger needed
+        // digitalWrite(BLUELED, HIGH); // Right Ball drops
+        // digitalWrite(GREENLED, LOW);
         // Serial.println("\tRight Ball dropped yeh");
     }
     else
     {
-        digitalWrite(GREENLED, HIGH); // Left Ball drops
-        digitalWrite(BLUELED, LOW);
+        //TODO: Implement leftServo release
+        //TODO: Delete wehen nolonger needed
+        // digitalWrite(GREENLED, HIGH); // Left Ball drops
+        // digitalWrite(BLUELED, LOW);
         // Serial.println("\tLeft Ball dropped yeh");
     }
     dropTime = millis();
@@ -395,12 +423,14 @@ void lcdTestPattern(void)
     }
 }
 
+//TODO: Add function which sends digits from catch time to writeToDigit()
+
 //select which digit to write to and what to write in it
 void writeToDigit(int digitNumber, int number)
 {
     digitNumber = digitNumber - 1;                                   //shift in new bits for number to be written
-    digitalWrite(RCLK_Pin, LOW);                                     //ground latchPin and hold low for as long as data is transmitted
-    shiftOut(SER_Pin, SRCLK_Pin, MSBFIRST, digitArray[digitNumber]); //shift in which digit to write to
-    shiftOut(SER_Pin, SRCLK_Pin, MSBFIRST, datArray[number]);        //shift in the actual number
-    digitalWrite(RCLK_Pin, HIGH);                                    //pull the latchPin clockPin to save the data
+    digitalWrite(RCLK_PIN, LOW);                                     //ground latchPin and hold low for as long as data is transmitted
+    shiftOut(SER_PIN, SRCLK_PIN, MSBFIRST, digitArray[digitNumber]); //shift in which digit to write to
+    shiftOut(SER_PIN, SRCLK_PIN, MSBFIRST, datArray[number]);        //shift in the actual number
+    digitalWrite(RCLK_PIN, HIGH);                                    //pull the latchPin clockPin to save the data
 }
