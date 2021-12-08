@@ -6,6 +6,7 @@
 #include <SPI.h>
 #include <esp_now.h>
 #include <WiFi.h>
+#include <ESP32Servo.h>
 
 // Screen dimensions
 #define SCREEN_WIDTH 128
@@ -22,24 +23,56 @@
 #define WHITE 0xFFFF
 
 // OLED pins
-#define SCLK_PIN 2
-#define MOSI_PIN 4
-#define DC_PIN 5
-#define CS_PIN 18
-#define RST_PIN 19
+#define MOSI_PIN 2 //SI
+#define SCLK_PIN 4 //CL
+#define DC_PIN 5   //DC
+#define RST_PIN 18 //R
+#define CS_PIN 19  //SC
 
-//Pins for the UI buttons
+// Pins for 7 Segment Display
+#define RCLK_PIN 13  //pin 13 (latch pin) 1
+#define SER_PIN 12   //pin 12 (datapin) 2
+#define SRCLK_PIN 14 //pin 14 (clock pin) 3
+
+// Pins for the UI buttons
 #define NEXTBUTTON 23
 #define SELECTBUTTON 22
 
-//Pins for "Hand" buttons
-#define LEFTHAND 33
-#define RIGHTHAND 32
+// Pins for limit switches used for Hand detection
+#define LEFTHAND 26
+#define RIGHTHAND 33
 
-//Pins for LEDs for simulation purposes
-#define REDLED 13   //when both hands are place
-#define BLUELED 12  //when right ball drops
-#define GREENLED 14 //when left ball drops
+// Pins for Servos used for the release mechanism
+#define RIGHTSERVOPIN 25
+#define LEFTSERVOPIN 27
+
+// Pins for Hall sensors used for ball detection
+#define RIGHTHALLSENSOR 35
+#define LEFTHALLSENSOR 32
+
+// TODO: Pin for LED Strip
+//#define LEDSTRIP 15
+
+// // Pins for LEDs for simulation purposes
+// #define REDLED 13   //when both hands are place
+// #define BLUELED 12  //when right ball drops
+// #define GREENLED 14 //when left ball drops
+
+// Variables for 7 Segment Display
+const int datArray[11] = {63, 6, 91, 79, 102, 109, 125, 7, 127, 111, 128}; //base 10 representations of bits for 0,1,2,3,4,5,6,7,8,9,.
+const byte digitArray[4] = {0b1000, 0b0100, 0b0010, 0b0001};               //digit number (first four bits in the bit shifter)
+int reactionTime = 0;
+int reactionTimeDisplayed[4];
+int refreshRate = 100; //Hz
+unsigned long processorTime;
+unsigned long previousTime = 0;
+unsigned long elapsedTime = 0; //elapsed time between digits are displayed
+
+// Variables for Servos
+Servo rightServo; //Create servo object to control right servo
+Servo leftServo;  //Create servo object to control left servo
+int posRightServo = 0;
+int posLeftServo = 0;
 
 // time variables for Ball drop
 uint16_t timeToRelease = 0;
@@ -61,6 +94,7 @@ bool handsOn();
 bool fingersOn();
 void handsDelay(int timeToDrop);
 void lcdTestPattern(void);
+void writeToDigit(int digitNumber, int number);
 
 // --- ESP-NOW stuff ---
 typedef struct struct_message // Structure to receive data
@@ -103,13 +137,25 @@ void setup()
     // Register for recv CB to get recv packer info
     esp_now_register_recv_cb(OnDataRecv);
 
+    pinMode(SER_PIN, OUTPUT);
+    pinMode(RCLK_PIN, OUTPUT);
+    pinMode(SRCLK_PIN, OUTPUT);
+
     pinMode(SELECTBUTTON, INPUT_PULLUP);
     pinMode(NEXTBUTTON, INPUT_PULLUP);
+
     pinMode(LEFTHAND, INPUT_PULLUP);
     pinMode(RIGHTHAND, INPUT_PULLUP);
-    pinMode(REDLED, OUTPUT);
-    pinMode(BLUELED, OUTPUT);
-    pinMode(GREENLED, OUTPUT);
+
+    rightServo.attach(RIGHTSERVOPIN);
+    leftServo.attach(LEFTSERVOPIN);
+
+    pinMode(RIGHTHALLSENSOR, INPUT);
+    pinMode(LEFTHALLSENSOR, INPUT);
+
+    // pinMode(REDLED, OUTPUT);
+    // pinMode(BLUELED, OUTPUT);
+    // pinMode(GREENLED, OUTPUT);
 
     tft.begin();
 
@@ -347,4 +393,14 @@ void lcdTestPattern(void)
                      pgm_read_word(&colors[c]));
         delay(100);
     }
+}
+
+//select which digit to write to and what to write in it
+void writeToDigit(int digitNumber, int number)
+{
+    digitNumber = digitNumber - 1;                                   //shift in new bits for number to be written
+    digitalWrite(RCLK_Pin, LOW);                                     //ground latchPin and hold low for as long as data is transmitted
+    shiftOut(SER_Pin, SRCLK_Pin, MSBFIRST, digitArray[digitNumber]); //shift in which digit to write to
+    shiftOut(SER_Pin, SRCLK_Pin, MSBFIRST, datArray[number]);        //shift in the actual number
+    digitalWrite(RCLK_Pin, HIGH);                                    //pull the latchPin clockPin to save the data
 }
