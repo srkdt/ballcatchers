@@ -4,35 +4,8 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1351.h>
 #include <SPI.h>
-
-// --- ESP-NOW stuff ---
 #include <esp_now.h>
 #include <WiFi.h>
-
-// Structure to receive data
-typedef struct struct_message
-{
-    bool ballSignal;
-    //float magnitude; //******
-} struct_message;
-
-// Create a struct_message called myData
-struct_message myData;
-
-// variable affected by ball catching
-bool caught = false;
-
-// callback function that will be executed when data is received
-void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len)
-{
-    memcpy(&myData, incomingData, sizeof(myData));
-    myData.ballSignal = true;
-    caught = true;
-}
-
-//This version of the code uses the screen and 4 buttons.
-//2 for the Next/Select functionality
-//2 to simulate the Hand pads
 
 // Screen dimensions
 #define SCREEN_WIDTH 128
@@ -48,52 +21,12 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len)
 #define YELLOW 0xFFE0
 #define WHITE 0xFFFF
 
-void lcdTestPattern(void);
-
-// You can use any (4 or) 5 pins
+// OLED pins
 #define SCLK_PIN 2
 #define MOSI_PIN 4
 #define DC_PIN 5
 #define CS_PIN 18
 #define RST_PIN 19
-
-//Pins for the UI buttons
-#define NextButton 23
-#define SelectButton 22
-
-//Pins for "Hand" buttons
-#define LeftHand 33
-#define RightHand 32
-
-//Pins for LEDs for simulation purposes
-#define redLED 13   //when both hands are place
-#define blueLED 12  //when right ball drops
-#define greenLED 14 //when left ball drops
-
-//Variables for Ball drop
-uint16_t timeToRelease = 0;
-uint32_t processorTime = 0;
-uint32_t previousTime = 0;
-uint32_t elapsedTime = 0;
-
-uint32_t dropTime = 0;
-uint16_t catchTime = 0;
-uint16_t bestTime = 0;
-
-// catch variable for random time generation
-bool catchMode = false;
-bool dropped = false;
-
-//Button State
-int difficultyCounter = 0; // variable for difficulty selection
-int StateNext = 0;
-int LastStateNext = 0;
-int CounterNext = 0; // used for difficulty settings
-int StateSelect = 0;
-int LastStateSelect = 0;
-int CounterSelect = 0;
-int StateLeftHand = 0;
-int StateRightHand = 0;
 
 // Color definitions
 #define BLACK 0x0000
@@ -105,10 +38,31 @@ int StateRightHand = 0;
 #define YELLOW 0xFFE0
 #define WHITE 0xFFFF
 
-// Option 1: use any pins but a little slower
-Adafruit_SSD1351 tft = Adafruit_SSD1351(SCREEN_WIDTH, SCREEN_HEIGHT, CS_PIN, DC_PIN, MOSI_PIN, SCLK_PIN, RST_PIN);
+//Pins for the UI buttons
+#define NEXTBUTTON 23
+#define SELECTBUTTON 22
 
-//Function Declaration
+//Pins for "Hand" buttons
+#define LEFTHAND 33
+#define RIGHTHAND 32
+
+//Pins for LEDs for simulation purposes
+#define REDLED 13   //when both hands are place
+#define BLUELED 12  //when right ball drops
+#define GREENLED 14 //when left ball drops
+
+// time variables for Ball drop
+uint16_t timeToRelease = 0;
+uint16_t dropTime = 0;
+uint16_t catchTime = 0;
+uint16_t bestTime = 0;
+
+// loop condition variables
+bool catchMode = false;
+int difficultyCounter = 0; // variable for difficulty selection
+int counterNext = 0;       // used for difficulty settings
+
+// Functions declararion: definition below
 void DifficultySelection();
 void DropBall();
 int createDropTime(int min, int max);
@@ -116,6 +70,30 @@ void timeGenerator(int mode);
 bool handsOn();
 bool fingersOn();
 void handsDelay(int timeToDrop);
+void lcdTestPattern(void);
+
+// --- ESP-NOW stuff ---
+typedef struct struct_message // Structure to receive data
+{
+    bool ballSignal;
+} struct_message;
+
+// struct_message called myData
+struct_message myData;
+
+// variable affected by ball catching
+bool caught = false;
+
+// callback function that will be executed when data is received
+void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len)
+{
+    memcpy(&myData, incomingData, sizeof(myData));
+    myData.ballSignal = true;
+    caught = true;
+}
+
+// OLED display
+Adafruit_SSD1351 tft = Adafruit_SSD1351(SCREEN_WIDTH, SCREEN_HEIGHT, CS_PIN, DC_PIN, MOSI_PIN, SCLK_PIN, RST_PIN);
 
 void setup()
 {
@@ -123,10 +101,9 @@ void setup()
     Serial.begin(115200);
 
     // ESP-NOW stuff
-    //Set device as a Wi-Fi Station
-    WiFi.mode(WIFI_STA);
+    WiFi.mode(WIFI_STA); // Set device as a Wi-Fi Station
 
-    //Init ESP-NOW
+    // Init ESP-NOW
     if (esp_now_init() != ESP_OK)
     {
         Serial.println("Error initializing ESP-NOW");
@@ -136,26 +113,26 @@ void setup()
     // Register for recv CB to get recv packer info
     esp_now_register_recv_cb(OnDataRecv);
 
-    pinMode(SelectButton, INPUT_PULLUP);
-    pinMode(NextButton, INPUT_PULLUP);
-    pinMode(LeftHand, INPUT_PULLUP);
-    pinMode(RightHand, INPUT_PULLUP);
-    pinMode(redLED, OUTPUT);
-    pinMode(blueLED, OUTPUT);
-    pinMode(greenLED, OUTPUT);
+    pinMode(SELECTBUTTON, INPUT_PULLUP);
+    pinMode(NEXTBUTTON, INPUT_PULLUP);
+    pinMode(LEFTHAND, INPUT_PULLUP);
+    pinMode(RIGHTHAND, INPUT_PULLUP);
+    pinMode(REDLED, OUTPUT);
+    pinMode(BLUELED, OUTPUT);
+    pinMode(GREENLED, OUTPUT);
 
     tft.begin();
 
-    lcdTestPattern();
+    lcdTestPattern(); // animation on boot - pride yeh
     delay(1000);
 
     tft.setCursor(0, 5);
     tft.fillScreen(BLACK);
     tft.setTextColor(GREEN);
     tft.setTextSize(1);
-    tft.println("--- BAllCATCHERZ ---");
+    tft.println("--- BAllCATCHERZ ---"); // live from the dripzone
 
-    DifficultySelection();
+    DifficultySelection(); // go in difficulty selection at least once at boot
 }
 
 void loop()
@@ -168,105 +145,86 @@ void loop()
         tft.setTextSize(1);
         tft.println("\nPress hands to play");
         tft.println("\nPress next to change difficulty");
+
         while (1)
         {
-            if (digitalRead(NextButton) == LOW)
+            if (digitalRead(NEXTBUTTON) == LOW) // option to set difficulty with right button press
             {
                 DifficultySelection();
                 break;
             }
-            else if (handsOn())
+            else if (handsOn()) // press hands to play
             {
-                break;
-            }
-        }
-        timeGenerator(CounterNext);
-        catchMode = true;
-        caught = false;
-        Serial.println("\n\t--- Waiting for hands... ---");
-        while (!handsOn())
-        {
-            if (digitalRead(NextButton) == LOW)
-            {
-                CounterSelect = 0;
                 break;
             }
         }
 
+        timeGenerator(counterNext); // select random time *after* difficulty selection
+        catchMode = true;           // go into play mode: don't set a new time, etc
+        caught = false;             // make sure the ball hasn't set the caught variable by mistake
+
+        // Serial.println("\n\t--- Waiting for hands... ---");
+
         handsDelay(timeToRelease); // checks user's hands position for given amt of time
-        DropBall();                // also assigns millis() to dropTime
-        dropped = true;
+        DropBall();                // ball drops - also assigns millis() to dropTime
     }
 
     if (caught == true)
     {
         catchTime = (millis() - dropTime);
-        Serial.print("\tCatch time: \t");
-        Serial.println(catchTime);
+        // Serial.print("\tCatch time: \t");
+        // Serial.println(catchTime);
+
         tft.fillRect(0, 40, 128, 90, BLACK);
         tft.setCursor(0, 40);
         tft.print("\nScore: ");
+
         if (catchTime < bestTime || bestTime == 0)
         {
             bestTime = catchTime;
-            tft.setTextColor(GREEN);
+            tft.setTextColor(GREEN); // better score is green
         }
         else
-            tft.setTextColor(RED);
+            tft.setTextColor(RED); // worse score is red
 
-        tft.setTextSize(2);
+        tft.setTextSize(2); // score bigger size
         tft.println(catchTime);
 
         tft.setTextColor(WHITE);
         tft.setTextSize(1);
         tft.print("\n\nBest score: ");
-        tft.println(bestTime);
+        tft.println(bestTime); // best score printed in white
 
-        while (!handsOn())
+        while (!handsOn()) // TODO: remove when clear how long score should be displayed
         {
         }
         catchMode = false;
-        myData.ballSignal = false;
         caught = false;
-        dropped = false;
         int caughtDelay = millis();
-        while (millis() - caughtDelay < 1000)
+        while (millis() - caughtDelay < 1000) // score display delay
         {
         }
     }
 }
 
-bool handsOn()
+bool handsOn() // returns true if hands are in place
 {
-    if (!digitalRead(LeftHand) && !digitalRead(RightHand))
+    if (!digitalRead(LEFTHAND) && !digitalRead(RIGHTHAND))
     {
-        digitalWrite(redLED, HIGH); //Red light signals both hands are placed
+        digitalWrite(REDLED, HIGH); // Red light signals both hands are placed
         return true;
     }
     else
     {
-        digitalWrite(redLED, LOW);
-        digitalWrite(blueLED, LOW);
-        digitalWrite(greenLED, LOW);
-        return false;
-    }
-}
-
-bool fingersOn()
-{
-    if (!digitalRead(NextButton) && !digitalRead(SelectButton))
-    {
-        return true;
-    }
-    else
-    {
+        digitalWrite(REDLED, LOW);
+        digitalWrite(BLUELED, LOW);
+        digitalWrite(GREENLED, LOW);
         return false;
     }
 }
 
 void DifficultySelection()
 {
-
     Serial.println("--- Difficutly selection ---");
     tft.fillRect(0, 18, 128, 110, BLACK);
     tft.setCursor(0, 30);
@@ -274,18 +232,21 @@ void DifficultySelection()
     tft.setTextSize(1);
     tft.println("Choose difficulty");
 
-    while (digitalRead(SelectButton))
+    while (digitalRead(SELECTBUTTON)) // click select (left) button to exit loop
     {
-        if (digitalRead(NextButton) == LOW)
+        if (digitalRead(NEXTBUTTON) == LOW) // toggle difficulty levels
         {
-            tft.fillRect(0, 38, 128, 90, BLACK);
-            tft.setCursor(0, 50);
-            tft.setTextSize(2);
             difficultyCounter++;
+
             if (difficultyCounter == 3)
             {
                 difficultyCounter = 0;
             }
+
+            tft.fillRect(0, 38, 128, 90, BLACK);
+            tft.setCursor(0, 50);
+            tft.setTextSize(2);
+
             switch (difficultyCounter)
             {
             case 0: // Easy Mode
@@ -298,28 +259,30 @@ void DifficultySelection()
                 tft.println("Hard");
                 break;
             }
-            Serial.print("Difficulty: ");
-            Serial.println(difficultyCounter);
-            delay(200);
+            // Serial.print("Difficulty: ");
+            // Serial.println(difficultyCounter);
+
+            delay(200); // avoid bouncing
         }
     }
     tft.fillRect(0, 18, 128, 90, BLACK);
     tft.setCursor(0, 30);
     tft.setTextSize(1);
     tft.print("Difficulty: ");
-    switch (difficultyCounter)
+
+    switch (difficultyCounter) // display difficulty (during game)
     {
     case 0: // Easy Mode
         tft.println("EASY");
-        Serial.println("*** Easy mode selected ***");
+        // Serial.println("*** Easy mode selected ***");
         break;
     case 1: // Normal Mode
         tft.println("NORMAL");
-        Serial.println("*** Normal mode selected ***");
+        // Serial.println("*** Normal mode selected ***");
         break;
     case 2: // Hard Mode
         tft.println("HARD");
-        Serial.println("*** Hard mode selected ***");
+        // Serial.println("*** Hard mode selected ***");
         break;
     }
 }
@@ -370,15 +333,15 @@ void DropBall()
     bool dropRightBall = random(0, 2);
     if (dropRightBall)
     {
-        digitalWrite(blueLED, HIGH); // Right Ball drops
-        digitalWrite(greenLED, LOW);
-        Serial.println("\tRight Ball dropped yeh");
+        digitalWrite(BLUELED, HIGH); // Right Ball drops
+        digitalWrite(GREENLED, LOW);
+        // Serial.println("\tRight Ball dropped yeh");
     }
     else
     {
-        digitalWrite(greenLED, HIGH); // Left Ball drops
-        digitalWrite(blueLED, LOW);
-        Serial.println("\tLeft Ball dropped yeh");
+        digitalWrite(GREENLED, HIGH); // Left Ball drops
+        digitalWrite(BLUELED, LOW);
+        // Serial.println("\tLeft Ball dropped yeh");
     }
     dropTime = millis();
 }
