@@ -108,24 +108,24 @@ struct_message myData;
 // variable affected by ball catching
 bool caught = false;
 
+// OLED display
+Adafruit_SSD1351 tft = Adafruit_SSD1351(SCREEN_WIDTH, SCREEN_HEIGHT, CS_PIN, DC_PIN, MOSI_PIN, SCLK_PIN, RST_PIN);
+
 // callback function that will be executed when data is received
 void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len)
 {
     memcpy(&myData, incomingData, sizeof(myData)); // TEST THIS!
     if (myData.ballSignal == false)                // set if ball goes to sleep
     {
-        tft.println("BALLS WENT TO SLEEP");
+        tft.println("\nBALLS WENT TO SLEEP");
     }
     if (myData.restart == true) // set at esp32_balls.cpp setup()
     {
-        tft.println("BALL STARTED");
+        tft.println("\nBALL ON");
     }
     else
         caught = true;
 }
-
-// OLED display
-Adafruit_SSD1351 tft = Adafruit_SSD1351(SCREEN_WIDTH, SCREEN_HEIGHT, CS_PIN, DC_PIN, MOSI_PIN, SCLK_PIN, RST_PIN);
 
 void setup()
 {
@@ -191,7 +191,7 @@ void loop()
             {
                 DifficultySelection();
                 playPrompt();
-                break;
+                // break;
             }
             else if (handsOn()) // press hands to play
             {
@@ -496,7 +496,7 @@ void displayScore()
     tft.setTextSize(1);
     tft.print("\n\nBest score: ");
     tft.println(bestTime); // best score printed in white
-    tft.print("Place hands to continue...");
+    tft.print("\nPlace hands to continue...");
 
     reactionTimeDisplayed[0] = catchTime / 1000; // array to be pushed to digits
     reactionTimeDisplayed[1] = (catchTime / 100) % 10;

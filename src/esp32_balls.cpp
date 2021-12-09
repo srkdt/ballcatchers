@@ -3,7 +3,7 @@
 #include <WiFi.h>
 
 #define THRESHOLD 40
-#define SLEEPTIME 10000 // delay in ms before uC goes to sleep
+#define SLEEPTIME 300000 // delay in ms before uC goes to sleep
 
 // Accelerometer pins:
 #define XPIN 34
@@ -111,8 +111,10 @@ void loop()
   g = sqrt(x * x + y * y + z * z);
 
   float difference = abs(g - g_prev);
+  Serial.println(difference); // test
+  delay(100);
 
-  if (difference > 400 && millis() - lastTime > 3000)
+  if (difference > 250 && millis() - lastTime > 3000)
   {
     sleepTrigger = millis();
     // Send message via ESP-NOW
