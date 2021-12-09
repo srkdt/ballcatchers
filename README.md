@@ -6,7 +6,7 @@ As part of the Mechatronics Trinational curriculum, our team has developed a rea
 **This repo contains and details the code used in the device (mainly C++).**
 
 <p align="center">
-  <img src="https://github.com/srkdt/ballcatchers/blob/main/media/Full_assembly_lowRes.gif"/>
+  <img src="https://github.com/srkdt/ballcatchers/blob/main/media/Intro_Film_lowRes.gif"/>
 </p>
 
 ## Acknowledgements

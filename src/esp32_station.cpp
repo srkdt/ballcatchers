@@ -99,6 +99,7 @@ bool fingersOn();
 typedef struct struct_message // Structure to receive data
 {
     bool ballSignal;
+    bool restart;
 } struct_message;
 
 // struct_message called myData
@@ -107,16 +108,24 @@ struct_message myData;
 // variable affected by ball catching
 bool caught = false;
 
+// OLED display
+Adafruit_SSD1351 tft = Adafruit_SSD1351(SCREEN_WIDTH, SCREEN_HEIGHT, CS_PIN, DC_PIN, MOSI_PIN, SCLK_PIN, RST_PIN);
+
 // callback function that will be executed when data is received
 void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len)
 {
-    memcpy(&myData, incomingData, sizeof(myData));
-    myData.ballSignal = true;
-    caught = true;
+    memcpy(&myData, incomingData, sizeof(myData)); // TEST THIS!
+    if (myData.ballSignal == false)                // set if ball goes to sleep
+    {
+        tft.println("\nBALLS WENT TO SLEEP");
+    }
+    if (myData.restart == true) // set at esp32_balls.cpp setup()
+    {
+        tft.println("\nBALL ON");
+    }
+    else
+        caught = true;
 }
-
-// OLED display
-Adafruit_SSD1351 tft = Adafruit_SSD1351(SCREEN_WIDTH, SCREEN_HEIGHT, CS_PIN, DC_PIN, MOSI_PIN, SCLK_PIN, RST_PIN);
 
 void setup()
 {
@@ -165,6 +174,9 @@ void setup()
     tft.println("--- BAllCATCHERZ ---"); // live from the dripzone
 
     DifficultySelection(); // go in difficulty selection at least once at boot
+
+    myData.ballSignal = true;
+    myData.restart = false;
 }
 
 void loop()
@@ -179,7 +191,7 @@ void loop()
             {
                 DifficultySelection();
                 playPrompt();
-                break;
+                // break;
             }
             else if (handsOn()) // press hands to play
             {
@@ -188,9 +200,9 @@ void loop()
         }
 
         timeGenerator(difficultyCounter); // select random time *after* difficulty selection
+        handsDelay(timeToRelease);        // checks user's hands position for given amt of time
         catchMode = true;                 // go into play mode: don't set a new time, etc
         caught = false;                   // make sure the ball hasn't set the caught variable by mistake
-        handsDelay(timeToRelease);        // checks user's hands position for given amt of time
         DropBall();                       // ball drops - also assigns millis() to dropTime
     }
 
@@ -217,6 +229,102 @@ bool handsOn() // returns true if hands are in place
         return false;
     }
 }
+
+/* #include <FastLED.h>
+
+#define NUM_LEDS  21
+#define LED_PIN   32
+
+#define BRIGHTNESS 200
+
+
+// FOR hsv rainbow:
+uint8_t hue = 0;
+
+// LED color array:
+CRGB leds[NUM_LEDS];
+
+void rainbow();
+void handsOn();
+void notHandsOn();
+
+uint32_t mills;
+
+void setup() {
+
+  Serial.begin(115200);
+  FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS)
+  .setCorrection(TypicalLEDStrip)
+  .setDither(BRIGHTNESS < 255);
+  FastLED.setBrightness(BRIGHTNESS);
+
+void loop() {
+
+  mills = millis();
+  while (millis() - mills < 3000) {
+    rainbow();
+  }
+  handsOn();
+  delay(3000);
+  notHandsOn();
+  delay(3000);
+
+}
+
+void handsOn() {
+
+ FastLED.clear();  // clear all pixel data
+ 
+  for (int i = 0; i < 10; i++) {
+    //leds[i] = CHSV(hue, 255, 255);
+    //leds[i] = CHSV(hue + (i * 10), 255, 255);
+    leds[i]   = CRGB::Aqua;
+  }
+
+  for (int i = 20; i < NUM_LEDS; i++) {
+    //leds[i] = CHSV(hue, 255, 255);
+    //leds[i] = CHSV(hue + (i * 10), 255, 255);
+    leds[i]   = CRGB::Aqua;
+  }
+  delay(1);
+  FastLED.show();
+}
+
+void notHandsOn() {
+
+ FastLED.clear();  // clear all pixel data
+ 
+  for (int i = 0; i < 10; i++) {
+    //leds[i] = CHSV(hue, 255, 255);
+    //leds[i] = CHSV(hue + (i * 10), 255, 255);
+    leds[i]   = CRGB::OrangeRed;
+  }
+
+  for (int i = 20; i < NUM_LEDS; i++) {
+    //leds[i] = CHSV(hue, 255, 255);
+    //leds[i] = CHSV(hue + (i * 10), 255, 255);
+    leds[i]   = CRGB::OrangeRed;
+  }
+  delay(1);
+  FastLED.show();
+}
+
+void rainbow() {
+
+
+  for (int i = 0; i < NUM_LEDS; i++) {
+    //leds[i] = CHSV(hue, 255, 255);
+    leds[i] = CHSV(hue + (i * 10), 255, 255);
+
+    EVERY_N_MILLISECONDS(5) {
+      hue++;
+    }
+    delay(1);
+    FastLED.show();
+  }
+}
+
+*/
 
 // TODO: bool ballsPlaced() // returns true if balls are in place
 
@@ -388,7 +496,7 @@ void displayScore()
     tft.setTextSize(1);
     tft.print("\n\nBest score: ");
     tft.println(bestTime); // best score printed in white
-    tft.print("Place hands to continue...");
+    tft.print("\nPlace hands to continue...");
 
     reactionTimeDisplayed[0] = catchTime / 1000; // array to be pushed to digits
     reactionTimeDisplayed[1] = (catchTime / 100) % 10;
