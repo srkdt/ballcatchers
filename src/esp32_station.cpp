@@ -99,6 +99,7 @@ bool fingersOn();
 typedef struct struct_message // Structure to receive data
 {
     bool ballSignal;
+    bool restart;
 } struct_message;
 
 // struct_message called myData
@@ -110,9 +111,17 @@ bool caught = false;
 // callback function that will be executed when data is received
 void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len)
 {
-    memcpy(&myData, incomingData, sizeof(myData));
-    myData.ballSignal = true;
-    caught = true;
+    memcpy(&myData, incomingData, sizeof(myData)); // TEST THIS!
+    if (myData.ballSignal == false)                // set if ball goes to sleep
+    {
+        tft.println("BALLS WENT TO SLEEP");
+    }
+    if (myData.restart == true) // set at esp32_balls.cpp setup()
+    {
+        tft.println("BALL STARTED");
+    }
+    else
+        caught = true;
 }
 
 // OLED display
@@ -165,6 +174,9 @@ void setup()
     tft.println("--- BAllCATCHERZ ---"); // live from the dripzone
 
     DifficultySelection(); // go in difficulty selection at least once at boot
+
+    myData.ballSignal = true;
+    myData.restart = false;
 }
 
 void loop()
@@ -188,9 +200,9 @@ void loop()
         }
 
         timeGenerator(difficultyCounter); // select random time *after* difficulty selection
+        handsDelay(timeToRelease);        // checks user's hands position for given amt of time
         catchMode = true;                 // go into play mode: don't set a new time, etc
         caught = false;                   // make sure the ball hasn't set the caught variable by mistake
-        handsDelay(timeToRelease);        // checks user's hands position for given amt of time
         DropBall();                       // ball drops - also assigns millis() to dropTime
     }
 
