@@ -7,6 +7,7 @@
 #include <esp_now.h>
 #include <WiFi.h>
 #include <ESP32Servo.h>
+#include <FastLED.h>
 
 // Screen dimensions
 #define SCREEN_WIDTH 128
@@ -47,11 +48,13 @@
 #define LEFTSERVOPIN 27
 
 // Pins for Hall sensors used for ball detection
-#define RIGHTHALLSENSOR 35
-#define LEFTHALLSENSOR 32
+#define RIGHTBALLPIN 35
+#define LEFTBALLPIN 32
 
-// TODO: Pin for LED Strip
-//#define LEDSTRIP 15 //alternativly 21 and 34 are still free
+// LED settings
+#define NUM_LEDS 21
+#define LED_PIN 15 // check!
+#define BRIGHTNESS 200
 
 // Variables for 7 Segment Display
 const int datArray[11] = {63, 6, 91, 79, 102, 109, 125, 7, 127, 111, 128}; //base 10 representations of bits for 0,1,2,3,4,5,6,7,8,9,.
@@ -76,6 +79,12 @@ uint16_t dropTime = 0;
 uint16_t catchTime = 0;
 uint16_t bestTime = 0;
 
+// LED color array:
+CRGB leds[NUM_LEDS];
+
+// FOR hsv rainbow:
+uint8_t hue = 0;
+
 bool catchMode = false;    // loop condition variable
 int difficultyCounter = 0; // variable for difficulty selection
 
@@ -90,8 +99,14 @@ void lcdTestPattern(void);
 void servosback();
 void displayScore();
 void writeToDigit(int digitNumber, int number);
+void rainbow();
+void handsLEDs();
+void notHandsLEDs();
+void betterLEDs();
+void worseLEDs();
 int createDropTime(int min, int max);
 bool handsOn();
+bool ballsHang();
 bool ballsPlaced();
 bool fingersOn();
 
@@ -153,11 +168,16 @@ void setup()
     pinMode(NEXTBUTTON, INPUT_PULLUP);
     pinMode(LEFTHAND, INPUT_PULLUP);
     pinMode(RIGHTHAND, INPUT_PULLUP);
-    pinMode(RIGHTHALLSENSOR, INPUT);
-    pinMode(LEFTHALLSENSOR, INPUT);
+    pinMode(RIGHTBALLPIN, INPUT);
+    pinMode(LEFTBALLPIN, INPUT);
 
     rightServo.attach(RIGHTSERVOPIN);
     leftServo.attach(LEFTSERVOPIN);
+
+    FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS)
+        .setCorrection(TypicalLEDStrip)
+        .setDither(BRIGHTNESS < 255);
+    FastLED.setBrightness(BRIGHTNESS);
 
     tft.begin();
 
@@ -166,6 +186,8 @@ void setup()
 
     lcdTestPattern(); // animation on boot - pride yeh
     delay(1000);
+
+    handsLEDs();
 
     tft.setCursor(0, 5);
     tft.fillScreen(BLACK);
@@ -183,6 +205,7 @@ void loop()
 {
     if (catchMode == false)
     {
+        notHandsLEDs();
         playPrompt();
 
         while (1)
@@ -191,9 +214,11 @@ void loop()
             {
                 DifficultySelection();
                 playPrompt();
-                // break;
+                break;
             }
-            else if (handsOn()) // press hands to play
+            else if (handsOn()) // press hands to play if balls hang
+            // TODO: uncomment when soldered
+            // else if (handsOn() && ballsHang()) // press hands to play if balls hang
             {
                 break;
             }
@@ -220,113 +245,23 @@ bool handsOn() // returns true if hands are in place
 {
     if (!digitalRead(LEFTHAND) && !digitalRead(RIGHTHAND))
     {
-        //TODO: Implement LED Strip signalizing that game is ready
         return true;
     }
     else
     {
-        //TODO: Implement LED Strip signalizing that game is NOT ready
         return false;
     }
 }
 
-/* #include <FastLED.h>
-
-#define NUM_LEDS  21
-#define LED_PIN   32
-
-#define BRIGHTNESS 200
-
-
-// FOR hsv rainbow:
-uint8_t hue = 0;
-
-// LED color array:
-CRGB leds[NUM_LEDS];
-
-void rainbow();
-void handsOn();
-void notHandsOn();
-
-uint32_t mills;
-
-void setup() {
-
-  Serial.begin(115200);
-  FastLED.addLeds<WS2812B, LED_PIN, GRB>(leds, NUM_LEDS)
-  .setCorrection(TypicalLEDStrip)
-  .setDither(BRIGHTNESS < 255);
-  FastLED.setBrightness(BRIGHTNESS);
-
-void loop() {
-
-  mills = millis();
-  while (millis() - mills < 3000) {
-    rainbow();
-  }
-  handsOn();
-  delay(3000);
-  notHandsOn();
-  delay(3000);
-
-}
-
-void handsOn() {
-
- FastLED.clear();  // clear all pixel data
- 
-  for (int i = 0; i < 10; i++) {
-    //leds[i] = CHSV(hue, 255, 255);
-    //leds[i] = CHSV(hue + (i * 10), 255, 255);
-    leds[i]   = CRGB::Aqua;
-  }
-
-  for (int i = 20; i < NUM_LEDS; i++) {
-    //leds[i] = CHSV(hue, 255, 255);
-    //leds[i] = CHSV(hue + (i * 10), 255, 255);
-    leds[i]   = CRGB::Aqua;
-  }
-  delay(1);
-  FastLED.show();
-}
-
-void notHandsOn() {
-
- FastLED.clear();  // clear all pixel data
- 
-  for (int i = 0; i < 10; i++) {
-    //leds[i] = CHSV(hue, 255, 255);
-    //leds[i] = CHSV(hue + (i * 10), 255, 255);
-    leds[i]   = CRGB::OrangeRed;
-  }
-
-  for (int i = 20; i < NUM_LEDS; i++) {
-    //leds[i] = CHSV(hue, 255, 255);
-    //leds[i] = CHSV(hue + (i * 10), 255, 255);
-    leds[i]   = CRGB::OrangeRed;
-  }
-  delay(1);
-  FastLED.show();
-}
-
-void rainbow() {
-
-
-  for (int i = 0; i < NUM_LEDS; i++) {
-    //leds[i] = CHSV(hue, 255, 255);
-    leds[i] = CHSV(hue + (i * 10), 255, 255);
-
-    EVERY_N_MILLISECONDS(5) {
-      hue++;
+bool ballsHang() // returns true if balls hang in place
+{
+    if (analogRead(LEFTBALLPIN) < 20 && analogRead(RIGHTBALLPIN < 20))
+    {
+        return true;
     }
-    delay(1);
-    FastLED.show();
-  }
+    else
+        return false;
 }
-
-*/
-
-// TODO: bool ballsPlaced() // returns true if balls are in place
 
 void DifficultySelection()
 {
@@ -406,17 +341,17 @@ void timeGenerator(int mode)
     switch (mode)
     {
     case 0: // Easy Mode
-        timeToRelease = random(800, 1000);
+        timeToRelease = random(1800, 2200);
         // Serial.print("Time to release - easy: \t");
         // Serial.println(timeToRelease);
         break;
     case 1: // Normal Mode
-        timeToRelease = random(500, 1500);
+        timeToRelease = random(500, 3000);
         // Serial.print("Time to release - normal: \t");
         // Serial.println(timeToRelease);
         break;
     case 2: // Hard Mode
-        timeToRelease = random(200, 2000);
+        timeToRelease = random(200, 4000);
         // Serial.print("Time to release - hard: \t");
         // Serial.println(timeToRelease);
         break;
@@ -436,6 +371,7 @@ void handsDelay(int timeToDrop)
             {
                 ok = true;
             }
+            rainbow();
         }
     }
 }
@@ -505,6 +441,15 @@ void displayScore()
 
     while (!handsOn())
     {
+        if (catchTime == bestTime)
+        {
+            betterLEDs();
+        }
+        else if (catchTime > bestTime)
+        {
+            worseLEDs();
+        }
+
         for (int j = 1; j < 5; j++)
         {
             writeToDigit(j, reactionTimeDisplayed[j - 1]);
@@ -521,4 +466,94 @@ void writeToDigit(int digitNumber, int number) //select which digit to write to 
     shiftOut(SER_PIN, SRCLK_PIN, MSBFIRST, digitArray[digitNumber]); // shift in which digit to write to
     shiftOut(SER_PIN, SRCLK_PIN, MSBFIRST, datArray[number]);        // shift in the actual number
     digitalWrite(RCLK_PIN, HIGH);                                    // pull the latchPin clockPin to save the data
+}
+
+void notHandsLEDs()
+{
+    FastLED.clear(); // clear all pixel data
+
+    for (int i = 0; i < 6; i++)
+    {
+        //leds[i] = CHSV(hue, 255, 255);
+        //leds[i] = CHSV(hue + (i * 10), 255, 255);
+        leds[i] = CRGB::OrangeRed;
+    }
+
+    for (int i = 15; i < NUM_LEDS; i++)
+    {
+        //leds[i] = CHSV(hue, 255, 255);
+        //leds[i] = CHSV(hue + (i * 10), 255, 255);
+        leds[i] = CRGB::OrangeRed;
+    }
+    delay(1);
+    FastLED.show();
+}
+
+void handsLEDs()
+{
+    FastLED.clear(); // clear all pixel data
+
+    for (int i = 0; i < 6; i++)
+    {
+        //leds[i] = CHSV(hue, 255, 255);
+        //leds[i] = CHSV(hue + (i * 10), 255, 255);
+        leds[i] = CRGB::Aqua;
+    }
+
+    for (int i = 15; i < NUM_LEDS; i++)
+    {
+        //leds[i] = CHSV(hue, 255, 255);
+        //leds[i] = CHSV(hue + (i * 10), 255, 255);
+        leds[i] = CRGB::Aqua;
+    }
+    delay(1);
+    FastLED.show();
+}
+
+void rainbow()
+{
+    for (int i = 0; i < NUM_LEDS; i++)
+    {
+        //leds[i] = CHSV(hue, 255, 255);
+        leds[i] = CHSV(hue + (i * 10), 255, 255);
+
+        EVERY_N_MILLISECONDS(5)
+        {
+            hue++;
+        }
+        delay(1);
+        FastLED.show();
+    }
+}
+
+void betterLEDs()
+{
+    uint8_t sinBeat = beatsin8(30, 0, NUM_LEDS - 1, 0, 0);
+    uint8_t sinBeat2 = beatsin8(30, 0, NUM_LEDS - 1, 0, 85);
+    uint8_t sinBeat3 = beatsin8(30, 0, NUM_LEDS - 1, 0, 170);
+
+    leds[sinBeat] = CRGB::Green;
+    leds[sinBeat2] = CRGB::DarkGreen;
+    leds[sinBeat3] = CRGB::LimeGreen;
+
+    fadeToBlackBy(leds, NUM_LEDS, 4);
+
+    delay(1);
+    FastLED.show();
+}
+
+void worseLEDs()
+{
+    uint8_t sinBeat = beatsin8(30, 0, NUM_LEDS - 1, 0, 0);
+    uint8_t sinBeat2 = beatsin8(30, 0, NUM_LEDS - 1, 0, 85);
+    uint8_t sinBeat3 = beatsin8(30, 0, NUM_LEDS - 1, 0, 170);
+
+    leds[sinBeat] = CRGB::Red;
+    leds[sinBeat2] = CRGB::OrangeRed;
+    leds[sinBeat3] = CRGB::DarkRed;
+
+    fadeToBlackBy(leds, NUM_LEDS, 4);
+
+    delay(1);
+    FastLED.show();
 }

@@ -111,10 +111,8 @@ void loop()
   g = sqrt(x * x + y * y + z * z);
 
   float difference = abs(g - g_prev);
-  Serial.println(difference); // test
-  delay(100);
 
-  if (difference > 250 && millis() - lastTime > 3000)
+  if (difference > 250 && millis() - lastTime > 3000) // 250 low enough for both balls
   {
     sleepTrigger = millis();
     // Send message via ESP-NOW
