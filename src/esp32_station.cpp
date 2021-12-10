@@ -217,6 +217,7 @@ void loop()
                 break;
             }
             else if (handsOn()) // press hands to play if balls hang
+            // TODO: uncomment when soldered
             // else if (handsOn() && ballsHang()) // press hands to play if balls hang
             {
                 break;
@@ -244,17 +245,15 @@ bool handsOn() // returns true if hands are in place
 {
     if (!digitalRead(LEFTHAND) && !digitalRead(RIGHTHAND))
     {
-        //TODO: Implement LED Strip signalizing that game is ready
         return true;
     }
     else
     {
-        //TODO: Implement LED Strip signalizing that game is NOT ready
         return false;
     }
 }
 
-bool ballsHang()
+bool ballsHang() // returns true if balls hang in place
 {
     if (analogRead(LEFTBALLPIN) < 20 && analogRead(RIGHTBALLPIN < 20))
     {
