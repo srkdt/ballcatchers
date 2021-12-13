@@ -32,8 +32,8 @@
 
 // Pins for 7 Segment Display
 #define RCLK_PIN 13  //pin 13 (latch pin) 1
-#define SER_PIN 12   //pin 12 (datapin) 2
-#define SRCLK_PIN 14 //pin 14 (clock pin) 3
+#define SER_PIN 14   //pin 12 (datapin) 2
+#define SRCLK_PIN 12 //pin 14 (clock pin) 3
 
 // Pins for the UI buttons
 #define NEXTBUTTON 23
@@ -61,7 +61,7 @@ const int datArray[11] = {63, 6, 91, 79, 102, 109, 125, 7, 127, 111, 128}; //bas
 const byte digitArray[4] = {0b1000, 0b0100, 0b0010, 0b0001};               //digit number (first four bits in the bit shifter)
 int reactionTime = 0;
 int reactionTimeDisplayed[4];
-int refreshRate = 100; //Hz
+int refreshRate = 100; // Hz
 unsigned long processorTime;
 unsigned long previousTime = 0;
 unsigned long elapsedTime = 0; //elapsed time between digits are displayed
@@ -181,8 +181,7 @@ void setup()
 
     tft.begin();
 
-    rightServo.write(90);
-    leftServo.write(90);
+    servosback();
 
     lcdTestPattern(); // animation on boot - pride yeh
     delay(1000);
@@ -378,8 +377,8 @@ void handsDelay(int timeToDrop)
 
 void servosback()
 {
-    rightServo.write(90);
-    leftServo.write(90);
+    rightServo.write(86);
+    leftServo.write(114);
 }
 
 void DropBall()
@@ -387,12 +386,12 @@ void DropBall()
     bool dropRightBall = random(0, 2);
     if (dropRightBall)
     {
-        rightServo.write(60);
+        rightServo.write(110);
         Serial.println("\tRight Ball dropped yeh");
     }
     else
     {
-        leftServo.write(120);
+        leftServo.write(90);
         Serial.println("\tLeft Ball dropped yeh");
     }
     dropTime = millis();
