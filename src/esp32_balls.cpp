@@ -2,7 +2,7 @@
 #include <esp_now.h>
 #include <WiFi.h>
 
-#define THRESHOLD 40
+#define THRESHOLD 50
 #define SLEEPTIME 300000 // delay in ms before uC goes to sleep
 
 // Accelerometer pins:
@@ -32,8 +32,8 @@ esp_now_peer_info_t peerInfo;
 // callback when data is sent
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 {
-  // Serial.print("\r\nLast Packet Send Status:\t");
-  // Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+  // ///.print("\r\nLast Packet Send Status:\t");
+  // ///.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 }
 
 int x = 0, y = 0, z = 0;
@@ -49,7 +49,7 @@ void callback()
 void setup()
 {
 
-  Serial.begin(115200);
+  ///.begin(115200);
 
   // Set device as a Wi-Fi Station
   WiFi.mode(WIFI_STA);
@@ -57,7 +57,7 @@ void setup()
   // Init ESP-NOW
   if (esp_now_init() != ESP_OK)
   {
-    // Serial.println("Error initializing ESP-NOW");
+    ///.println("Error initializing ESP-NOW");
     return;
   }
 
@@ -72,7 +72,7 @@ void setup()
   // Add peer
   if (esp_now_add_peer(&peerInfo) != ESP_OK)
   {
-    // Serial.println("Failed to add peer");
+    ///.println("Failed to add peer");
     return;
   }
 
@@ -120,11 +120,11 @@ void loop()
 
     if (result == ESP_OK)
     {
-      Serial.println("Sent with success");
+      ///.println("Sent with success");
     }
     else
     {
-      Serial.println("Error sending the data");
+      ///.println("Error sending the data");
     }
 
     lastTime = millis();
@@ -133,7 +133,7 @@ void loop()
   {
     myData.ballSignal = false; // lets the station know the ball sleeps
     esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
-    Serial.println("Sleeping...");
+    ///.println("Sleeping...");
     esp_deep_sleep_start(); // go to sleep until pin 15 is touched
   }
 }
