@@ -32,8 +32,8 @@
 
 // Pins for 7 Segment Display
 #define RCLK_PIN 13  //pin 13 (latch pin) 1
-#define SER_PIN 12   //pin 12 (datapin) 2
-#define SRCLK_PIN 14 //pin 14 (clock pin) 3
+#define SER_PIN 14   //pin 12 (datapin) 2
+#define SRCLK_PIN 12 //pin 14 (clock pin) 3
 
 // Pins for the UI buttons
 #define NEXTBUTTON 23
@@ -47,7 +47,7 @@
 #define RIGHTSERVOPIN 25
 #define LEFTSERVOPIN 27
 
-// Pins for Hall sensors used for ball detection
+// Pins for photo sensors used for ball detection
 #define RIGHTBALLPIN 35
 #define LEFTBALLPIN 32
 
@@ -61,7 +61,7 @@ const int datArray[11] = {63, 6, 91, 79, 102, 109, 125, 7, 127, 111, 128}; //bas
 const byte digitArray[4] = {0b1000, 0b0100, 0b0010, 0b0001};               //digit number (first four bits in the bit shifter)
 int reactionTime = 0;
 int reactionTimeDisplayed[4];
-int refreshRate = 100; //Hz
+int refreshRate = 100; // Hz
 unsigned long processorTime;
 unsigned long previousTime = 0;
 unsigned long elapsedTime = 0; //elapsed time between digits are displayed
@@ -78,6 +78,8 @@ uint16_t timeToRelease = 0;
 uint16_t dropTime = 0;
 uint16_t catchTime = 0;
 uint16_t bestTime = 0;
+
+String catchTimeString;
 
 // LED color array:
 CRGB leds[NUM_LEDS];
@@ -104,6 +106,7 @@ void handsLEDs();
 void notHandsLEDs();
 void betterLEDs();
 void worseLEDs();
+void oledDisplayCenter(String text, int cursorHeight);
 int createDropTime(int min, int max);
 bool handsOn();
 bool ballsHang();
@@ -129,14 +132,20 @@ Adafruit_SSD1351 tft = Adafruit_SSD1351(SCREEN_WIDTH, SCREEN_HEIGHT, CS_PIN, DC_
 // callback function that will be executed when data is received
 void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len)
 {
-    memcpy(&myData, incomingData, sizeof(myData)); // TEST THIS!
-    if (myData.ballSignal == false)                // set if ball goes to sleep
+    memcpy(&myData, incomingData, sizeof(myData));
+    if (myData.ballSignal == false) // set if ball goes to sleep
     {
-        tft.println("\nBALLS WENT TO SLEEP");
+        tft.fillRect(0, 15, 128, 15, BLACK);
+        tft.setTextColor(RED);
+        tft.setTextSize(1);
+        oledDisplayCenter("BALLS WENT TO SLEEP", 20);
     }
     if (myData.restart == true) // set at esp32_balls.cpp setup()
     {
-        tft.println("\nBALL ON");
+        tft.fillRect(0, 15, 128, 15, BLACK);
+        tft.setTextColor(RED);
+        tft.setTextSize(1);
+        oledDisplayCenter("BALL ON", 20);
     }
     else
         caught = true;
@@ -144,7 +153,7 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *incomingData, int len)
 
 void setup()
 {
-    Serial.begin(115200);
+    ///.begin(115200);
 
     // Set device as a Wi-Fi Station
     WiFi.mode(WIFI_STA);
@@ -152,7 +161,7 @@ void setup()
     // Init ESP-NOW
     if (esp_now_init() != ESP_OK)
     {
-        Serial.println("Error initializing ESP-NOW");
+        ///.println("Error initializing ESP-NOW");
         return;
     }
 
@@ -181,19 +190,31 @@ void setup()
 
     tft.begin();
 
-    rightServo.write(90);
-    leftServo.write(90);
+    servosback();
 
     lcdTestPattern(); // animation on boot - pride yeh
     delay(1000);
 
+    tft.fillScreen(BLACK);
+    oledDisplayCenter("Place balls in", 20);
+    oledDisplayCenter("charging position", 30);
+    oledDisplayCenter("to activate them!", 40);
+
+    delay(5000);
+
     handsLEDs();
 
-    tft.setCursor(0, 5);
     tft.fillScreen(BLACK);
     tft.setTextColor(GREEN);
     tft.setTextSize(1);
-    tft.println("--- BAllCATCHERZ ---"); // live from the dripzone
+    oledDisplayCenter("--- BAllCATCHERZ ---", 5);
+
+    for (int j = 1; j < 5; j++)
+    {
+        writeToDigit(j, 0);
+        delay(1000 / (refreshRate * 4));
+    }
+    writeToDigit(5, 0);
 
     DifficultySelection(); // go in difficulty selection at least once at boot
 
@@ -216,9 +237,7 @@ void loop()
                 playPrompt();
                 break;
             }
-            else if (handsOn()) // press hands to play if balls hang
-            // TODO: uncomment when soldered
-            // else if (handsOn() && ballsHang()) // press hands to play if balls hang
+            else if ((handsOn()) && (ballsHang())) // press hands to play if balls hang
             {
                 break;
             }
@@ -255,7 +274,7 @@ bool handsOn() // returns true if hands are in place
 
 bool ballsHang() // returns true if balls hang in place
 {
-    if (analogRead(LEFTBALLPIN) < 20 && analogRead(RIGHTBALLPIN < 20))
+    if ((analogRead(LEFTBALLPIN) < 20) && (analogRead(RIGHTBALLPIN) < 20))
     {
         return true;
     }
@@ -265,14 +284,16 @@ bool ballsHang() // returns true if balls hang in place
 
 void DifficultySelection()
 {
-    //Serial.println("--- Difficutly selection ---");
+    ///.println("--- Difficutly selection ---");
     tft.fillRect(0, 18, 128, 110, BLACK);
-    tft.setCursor(0, 30);
+    tft.setCursor(0, 50);
     tft.setTextColor(BLUE);
     tft.setTextSize(1);
-    tft.println("Choose difficulty");
+    tft.println("<- Change difficulty");
+    tft.setCursor(0, 70);
+    tft.print("           Confirm ->");
 
-    tft.setCursor(0, 50);
+    tft.setCursor(0, 80);
     tft.setTextSize(2);
     displayDifficulty();
 
@@ -287,8 +308,8 @@ void DifficultySelection()
                 difficultyCounter = 0;
             }
 
-            tft.fillRect(0, 38, 128, 90, BLACK);
-            tft.setCursor(0, 50);
+            tft.fillRect(0, 80, 128, 48, BLACK);
+            tft.setCursor(0, 80);
             tft.setTextSize(2);
             displayDifficulty();
 
@@ -299,12 +320,6 @@ void DifficultySelection()
             break;
         }
     }
-
-    tft.fillRect(0, 18, 128, 90, BLACK);
-    tft.setCursor(0, 30);
-    tft.setTextSize(1);
-    tft.print("Difficulty: ");
-    displayDifficulty();
 }
 
 void displayDifficulty()
@@ -312,28 +327,27 @@ void displayDifficulty()
     switch (difficultyCounter) // display difficulty (during game)
     {
     case 0: // Easy Mode
-        tft.println("EASY");
-        // Serial.println("*** Easy mode selected ***");
+        oledDisplayCenter("EASY", 100);
         break;
     case 1: // Normal Mode
-        tft.println("NORMAL");
-        // Serial.println("*** Normal mode selected ***");
+        oledDisplayCenter("NORMAL", 100);
         break;
     case 2: // Hard Mode
-        tft.println("HARD");
-        // Serial.println("*** Hard mode selected ***");
+        oledDisplayCenter("HARD", 100);
         break;
     }
 }
 
 void playPrompt()
 {
-    tft.fillRect(0, 38, 128, 90, BLACK);
-    tft.setCursor(0, 40);
+    tft.fillRect(0, 20, 128, 102, BLACK);
+    tft.setCursor(0, 50);
     tft.setTextColor(BLUE);
     tft.setTextSize(1);
-    tft.println("\nPlace hands to play");
-    tft.println("\nPress NEXT to change difficulty");
+    tft.println("<- Change difficulty");
+    oledDisplayCenter("Place hands to play", 70);
+    tft.setTextSize(2);
+    displayDifficulty();
 }
 
 void timeGenerator(int mode)
@@ -342,18 +356,12 @@ void timeGenerator(int mode)
     {
     case 0: // Easy Mode
         timeToRelease = random(1800, 2200);
-        // Serial.print("Time to release - easy: \t");
-        // Serial.println(timeToRelease);
         break;
     case 1: // Normal Mode
-        timeToRelease = random(500, 3000);
-        // Serial.print("Time to release - normal: \t");
-        // Serial.println(timeToRelease);
+        timeToRelease = random(1000, 3000);
         break;
     case 2: // Hard Mode
-        timeToRelease = random(200, 4000);
-        // Serial.print("Time to release - hard: \t");
-        // Serial.println(timeToRelease);
+        timeToRelease = random(200, 8000);
         break;
     }
 }
@@ -378,8 +386,8 @@ void handsDelay(int timeToDrop)
 
 void servosback()
 {
-    rightServo.write(90);
-    leftServo.write(90);
+    rightServo.write(86);
+    leftServo.write(114);
 }
 
 void DropBall()
@@ -387,13 +395,13 @@ void DropBall()
     bool dropRightBall = random(0, 2);
     if (dropRightBall)
     {
-        rightServo.write(60);
-        Serial.println("\tRight Ball dropped yeh");
+        rightServo.write(110);
+        ///.println("\tRight Ball dropped yeh");
     }
     else
     {
-        leftServo.write(120);
-        Serial.println("\tLeft Ball dropped yeh");
+        leftServo.write(90);
+        ///.println("\tLeft Ball dropped yeh");
     }
     dropTime = millis();
 }
@@ -414,8 +422,9 @@ void lcdTestPattern(void)
 void displayScore()
 {
     tft.fillRect(0, 40, 128, 90, BLACK);
+    tft.setTextSize(1);
     tft.setCursor(0, 40);
-    tft.print("\nScore: ");
+    oledDisplayCenter("Score:", 30);
 
     if (catchTime < bestTime || bestTime == 0)
     {
@@ -426,20 +435,21 @@ void displayScore()
         tft.setTextColor(RED); // worse score is red
 
     tft.setTextSize(2); // score bigger size
-    tft.println(catchTime);
+    catchTimeString = String(catchTime);
+    oledDisplayCenter(catchTimeString, 50);
 
     tft.setTextColor(WHITE);
     tft.setTextSize(1);
     tft.print("\n\nBest score: ");
     tft.println(bestTime); // best score printed in white
-    tft.print("\nPlace hands to continue...");
+    tft.print("\nPlace hands and balls\nto continue...");
 
     reactionTimeDisplayed[0] = catchTime / 1000; // array to be pushed to digits
     reactionTimeDisplayed[1] = (catchTime / 100) % 10;
     reactionTimeDisplayed[2] = (catchTime / 10) % 10;
     reactionTimeDisplayed[3] = catchTime % 10;
 
-    while (!handsOn())
+    while (!((handsOn()) && (ballsHang())))
     {
         if (catchTime == bestTime)
         {
@@ -449,17 +459,19 @@ void displayScore()
         {
             worseLEDs();
         }
-
-        for (int j = 1; j < 5; j++)
+        if (catchTime <= 9999)
         {
-            writeToDigit(j, reactionTimeDisplayed[j - 1]);
-            delay(1000 / (refreshRate * 4));
+            for (int j = 1; j < 5; j++)
+            {
+                writeToDigit(j, reactionTimeDisplayed[j - 1]);
+                delay(1000 / (refreshRate * 4));
+            }
         }
     }
     writeToDigit(5, 0);
 }
 
-void writeToDigit(int digitNumber, int number) //select which digit to write to and what to write in it
+void writeToDigit(int digitNumber, int number) // select which digit to write to and what to write in it
 {
     digitNumber = digitNumber - 1;                                   // shift in new bits for number to be written
     digitalWrite(RCLK_PIN, LOW);                                     // ground latchPin and hold low for as long as data is transmitted
@@ -474,15 +486,11 @@ void notHandsLEDs()
 
     for (int i = 0; i < 6; i++)
     {
-        //leds[i] = CHSV(hue, 255, 255);
-        //leds[i] = CHSV(hue + (i * 10), 255, 255);
         leds[i] = CRGB::OrangeRed;
     }
 
     for (int i = 15; i < NUM_LEDS; i++)
     {
-        //leds[i] = CHSV(hue, 255, 255);
-        //leds[i] = CHSV(hue + (i * 10), 255, 255);
         leds[i] = CRGB::OrangeRed;
     }
     delay(1);
@@ -495,15 +503,11 @@ void handsLEDs()
 
     for (int i = 0; i < 6; i++)
     {
-        //leds[i] = CHSV(hue, 255, 255);
-        //leds[i] = CHSV(hue + (i * 10), 255, 255);
         leds[i] = CRGB::Aqua;
     }
 
     for (int i = 15; i < NUM_LEDS; i++)
     {
-        //leds[i] = CHSV(hue, 255, 255);
-        //leds[i] = CHSV(hue + (i * 10), 255, 255);
         leds[i] = CRGB::Aqua;
     }
     delay(1);
@@ -514,7 +518,6 @@ void rainbow()
 {
     for (int i = 0; i < NUM_LEDS; i++)
     {
-        //leds[i] = CHSV(hue, 255, 255);
         leds[i] = CHSV(hue + (i * 10), 255, 255);
 
         EVERY_N_MILLISECONDS(5)
@@ -556,4 +559,18 @@ void worseLEDs()
 
     delay(1);
     FastLED.show();
+}
+
+void oledDisplayCenter(String text, int cursorHeight)
+{
+    int16_t x1;
+    int16_t y1;
+    uint16_t width;
+    uint16_t height;
+
+    tft.getTextBounds(text, 0, 0, &x1, &y1, &width, &height);
+
+    // display on horizontal and vertical center
+    tft.setCursor((SCREEN_WIDTH - width) / 2, cursorHeight);
+    tft.println(text); // text to display
 }
