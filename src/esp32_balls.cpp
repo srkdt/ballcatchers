@@ -2,7 +2,7 @@
 #include <esp_now.h>
 #include <WiFi.h>
 
-#define THRESHOLD 50
+#define THRESHOLD 50     // for wake up pin
 #define SLEEPTIME 300000 // delay in ms before uC goes to sleep
 
 // Accelerometer pins:
@@ -20,7 +20,6 @@ typedef struct struct_message
 {
   bool ballSignal;
   bool restart;
-
 } struct_message;
 
 // Create a struct_message called myData
@@ -32,8 +31,8 @@ esp_now_peer_info_t peerInfo;
 // callback when data is sent
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status)
 {
-  // ///.print("\r\nLast Packet Send Status:\t");
-  // ///.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+  ///.print("\r\nLast Packet Send Status:\t");
+  ///.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 }
 
 int x = 0, y = 0, z = 0;
@@ -48,7 +47,6 @@ void callback()
 
 void setup()
 {
-
   ///.begin(115200);
 
   // Set device as a Wi-Fi Station
@@ -95,16 +93,16 @@ void loop()
   y = 0;
   z = 0;
 
-  for (int i = 0; i < 10; i++)
+  for (int i = 0; i < 5; i++)
   {
     x += analogRead(XPIN);
     y += analogRead(YPIN);
     z += analogRead(ZPIN);
     delayMicroseconds(1);
   }
-  x /= 10;
-  y /= 10;
-  z /= 10;
+  x /= 5;
+  y /= 5;
+  z /= 5;
 
   g_prev = g;
 
@@ -112,9 +110,10 @@ void loop()
 
   float difference = abs(g - g_prev);
 
-  if (difference > 250 && millis() - lastTime > 3000) // 250 low enough for both balls
+  if (difference > 250 && millis() - lastTime > 500) // 250 low enough for both balls
   {
     sleepTrigger = millis();
+
     // Send message via ESP-NOW
     esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
 
@@ -133,7 +132,6 @@ void loop()
   {
     myData.ballSignal = false; // lets the station know the ball sleeps
     esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *)&myData, sizeof(myData));
-    ///.println("Sleeping...");
     esp_deep_sleep_start(); // go to sleep until pin 15 is touched
   }
 }

@@ -346,7 +346,6 @@ void playPrompt()
     tft.setTextSize(1);
     tft.println("<- Change difficulty");
     oledDisplayCenter("Place hands to play", 70);
-    // tft.println("\n\nPlace hands to play");
     tft.setTextSize(2);
     displayDifficulty();
 }
@@ -359,10 +358,10 @@ void timeGenerator(int mode)
         timeToRelease = random(1800, 2200);
         break;
     case 1: // Normal Mode
-        timeToRelease = random(500, 3000);
+        timeToRelease = random(1000, 3000);
         break;
     case 2: // Hard Mode
-        timeToRelease = random(200, 4000);
+        timeToRelease = random(200, 8000);
         break;
     }
 }
@@ -472,7 +471,7 @@ void displayScore()
     writeToDigit(5, 0);
 }
 
-void writeToDigit(int digitNumber, int number) //select which digit to write to and what to write in it
+void writeToDigit(int digitNumber, int number) // select which digit to write to and what to write in it
 {
     digitNumber = digitNumber - 1;                                   // shift in new bits for number to be written
     digitalWrite(RCLK_PIN, LOW);                                     // ground latchPin and hold low for as long as data is transmitted
@@ -487,15 +486,11 @@ void notHandsLEDs()
 
     for (int i = 0; i < 6; i++)
     {
-        //leds[i] = CHSV(hue, 255, 255);
-        //leds[i] = CHSV(hue + (i * 10), 255, 255);
         leds[i] = CRGB::OrangeRed;
     }
 
     for (int i = 15; i < NUM_LEDS; i++)
     {
-        //leds[i] = CHSV(hue, 255, 255);
-        //leds[i] = CHSV(hue + (i * 10), 255, 255);
         leds[i] = CRGB::OrangeRed;
     }
     delay(1);
@@ -508,15 +503,11 @@ void handsLEDs()
 
     for (int i = 0; i < 6; i++)
     {
-        //leds[i] = CHSV(hue, 255, 255);
-        //leds[i] = CHSV(hue + (i * 10), 255, 255);
         leds[i] = CRGB::Aqua;
     }
 
     for (int i = 15; i < NUM_LEDS; i++)
     {
-        //leds[i] = CHSV(hue, 255, 255);
-        //leds[i] = CHSV(hue + (i * 10), 255, 255);
         leds[i] = CRGB::Aqua;
     }
     delay(1);
@@ -527,7 +518,6 @@ void rainbow()
 {
     for (int i = 0; i < NUM_LEDS; i++)
     {
-        //leds[i] = CHSV(hue, 255, 255);
         leds[i] = CHSV(hue + (i * 10), 255, 255);
 
         EVERY_N_MILLISECONDS(5)
@@ -581,8 +571,6 @@ void oledDisplayCenter(String text, int cursorHeight)
     tft.getTextBounds(text, 0, 0, &x1, &y1, &width, &height);
 
     // display on horizontal and vertical center
-    // tft.clearDisplay(); // clear display
     tft.setCursor((SCREEN_WIDTH - width) / 2, cursorHeight);
     tft.println(text); // text to display
-                       // tft.display();
 }
