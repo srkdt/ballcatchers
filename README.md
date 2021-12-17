@@ -17,5 +17,5 @@ We would like to thank Mr Silvan Wirth for his support and advice all along the 
 ## Final design
 
 <p align="center">
-  <img src=media\final_design/>
+  <img src=media\final_product.jpg/>
 </p>
